@@ -209,13 +209,21 @@ async function importWT(){
   if (S.top.length && !confirm("Replace the family you've entered with the one from WikiTree?")) return;
   const mode = $("#wtMode").value, depth = Math.max(1, cfg().gens - (mode === "parent" ? 1 : 0));
   const url = "https://api.wikitree.com/api.php?action=getAncestors&key=" + encodeURIComponent(id) + "&depth=" + depth
-    + "&fields=Id,Name,FirstName,RealName,BirthDate,BirthLocation,Father,Mother,IsLiving";
+    + "&appId=WikiTreeFamilyAdventure&fields=Id,Name,FirstName,RealName,BirthDate,BirthLocation,Father,Mother,IsLiving";
   msg("Asking WikiTree…");
   let list;
-  let st = ""; try { const r = await fetch(url, {credentials:"include"}), j = (await r.json())[0] || {}; list = j.ancestors || []; st = j.status || ""; }
-  catch (e) { return msg("Couldn't reach WikiTree. Importing works when this app is opened from apps.wikitree.com. You can still type the family in by hand."); }
+  let st = "";
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try { const r = await fetch(url, {credentials:"include"}), j = (await r.json())[0] || {}; list = j.ancestors || []; st = j.status || ""; }
+    catch (e) { return msg("Couldn't reach WikiTree. Importing works when this app is opened from apps.wikitree.com. You can still type the family in by hand."); }
+    if (list.length || !/limit/i.test(st)) break;
+    const wait = [5, 12, 25][attempt];
+    if (attempt === 3) break;
+    for (let t = wait; t > 0; t--) { msg("WikiTree is busy. Trying again in " + t + " seconds…"); await new Promise(r => setTimeout(r, 1000)); }
+    msg("Asking WikiTree again…");
+  }
   const byId = new Map(list.map(p => [p.Id, p])), root = list.find(p => String(p.Name).toLowerCase() === id.toLowerCase() || String(p.Id) === id);
-  if (!list.length && /limit/i.test(st)) return msg("WikiTree says too many requests right now. Wait a minute and try again.");
+  if (!list.length && /limit/i.test(st)) return msg("WikiTree is still limiting requests. Wait a couple of minutes, then press Import again.");
   if (!root) return msg("WikiTree didn't return a public profile for “" + id + "”. Check the ID, or the profile may be private.");
   const make = p => {
     const pid = "p" + S.next++;
