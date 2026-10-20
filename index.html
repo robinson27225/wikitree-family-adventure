@@ -350,8 +350,8 @@ function guides(x1, x2, base, cap){
     + `<line x1="${x1}" y1="${f1(base - cap / 2)}" x2="${x2}" y2="${f1(base - cap / 2)}" stroke="#9db4e0" stroke-width="1.6" stroke-dasharray="9 7"/>`
     + `<line x1="${x1}" y1="${f1(base)}" x2="${x2}" y2="${f1(base)}" stroke="#6f8fd1" stroke-width="2.4"/>`;
 }
-const dtext = (t, x, y, size, anchor = "middle") => traceText(t, x, y + size * .36, size * .72, anchor);
-const fitT = (t, w, max) => Math.max(8, Math.min(max, w / (tUnits(t) * .0072)));
+const dtext = (t, x, y, size, anchor = "middle") => lv() >= 1 ? stext(t, x, y, size, anchor, INK, 'font-weight="800"') : traceText(t, x, y + size * .36, size * .72, anchor);
+const fitT = (t, w, max) => Math.max(8, Math.min(max, lv() >= 1 ? w / (Math.max(t.length, 1) * .6) : w / (tUnits(t) * .0072)));
 const stext = (t, x, y, size, anchor = "middle", fill = INK, extra = "") =>
   `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" dominant-baseline="central" class="t" fill="${fill}" ${extra}>${esc(t)}</text>`;
 
@@ -618,7 +618,7 @@ function patternDefs(){
   <pattern id="pt-scales" width="12" height="12" ${t}>${[[0,0],[12,0],[6,6],[0,12],[12,12]].map(([x,y]) => `<circle cx="${x}" cy="${y}" r="6" ${k} stroke-width="1.3"/>`).join("")}</pattern>`;
 }
 function labelFit(txt, ri, ro, ang, maxCap){
-  const rm = (ri + ro) / 2, wd = ro - ri, u = tUnits(txt) / 100;
+  const rm = (ri + ro) / 2, wd = ro - ri, u = lv() >= 1 ? Math.max(txt.length, 1) * .8 : tUnits(txt) / 100;
   const arcC = Math.min(maxCap, (rm * ang - 14) / u, wd * .5), radC = Math.min(maxCap, (wd - 18) / u, ri * ang - 12);
   return arcC >= radC * .85 ? {mode:"arc", cap:arcC} : {mode:"rad", cap:radC};
 }
@@ -673,7 +673,11 @@ function fanSVG(cx, cy, R){
       const rw = f.mode === "arc" ? cap * 1.7 : Math.min(cap * 1.7, ri * span - 6);
       ribbons += `<path d="${path}" fill="none" stroke="#fff" stroke-width="${f1(rw)}" pointer-events="none"/>`;
     }
-    const els = f.mode === "arc" ? traceArc(t, rm, mid, cap) : traceRad(t, rm, mid, cap);
+    let els;
+    if (lv() >= 1) {
+      defs += `<path id="lp${i}" d="${path}" fill="none"/>`;
+      els = `<text font-size="${f1(cap / .72)}" font-weight="800" text-anchor="middle" dominant-baseline="central" class="t" fill="${INK}" stroke="none" pointer-events="none"><textPath href="#lp${i}" startOffset="50%">${esc(t)}</textPath></text>`;
+    } else els = f.mode === "arc" ? traceArc(t, rm, mid, cap) : traceRad(t, rm, mid, cap);
     texts += n.ghost ? `<g opacity=".55">${els}</g>` : els;
   });
   const half = `M ${f1(cx - r0)} ${cy} A ${r0} ${r0} 0 0 1 ${f1(cx + r0)} ${cy} Z`;
@@ -694,11 +698,12 @@ function pCover(){
   return page(o);
 }
 function pName(){
-  let o = stext("Trace your name!", 425, 115, 44);
+  const young = lv() === 0;
+  let o = stext(young ? "Trace your name!" : "My name is", 425, 115, 44);
   const name = cname(), nsz = fitT(name, 730, 150);
-  o += guides(55, 795, 320, nsz * .72) + dtext(name, 425, 320 - nsz * .36, nsz);
-  o += stext("Now write it yourself:", 80, 410, 24, "start", "#6b7488");
-  [490, 565].forEach(y => {
+  o += young ? guides(55, 795, 320, nsz * .72) + dtext(name, 425, 320 - nsz * .36, nsz) : dtext(name, 425, 260, nsz);
+  if (young) o += stext("Now write it yourself:", 80, 410, 24, "start", "#6b7488");
+  (young ? [490, 565] : []).forEach(y => {
     o += `<line x1="70" y1="${y - 50}" x2="780" y2="${y - 50}" stroke="#c9d0de" stroke-width="2"/><line x1="70" y1="${y - 25}" x2="780" y2="${y - 25}" stroke="#c9d0de" stroke-width="2" stroke-dasharray="8 8"/><line x1="70" y1="${y}" x2="780" y2="${y}" stroke="${INK}" stroke-width="3"/>`;
   });
   o += `<ellipse cx="425" cy="825" rx="170" ry="190" fill="none" stroke="#9aa3b5" stroke-width="4" stroke-dasharray="12 10"/>` + stext("Draw yourself here!", 425, 825, 26, "middle", "#9aa3b5");
@@ -706,7 +711,7 @@ function pName(){
   return page(o);
 }
 function pAlphabet(){
-  if (lv() > 1) return "";
+  if (lv() > 0) return "";
   const cap = 62, rows = [["Aa","Bb","Cc","Dd","Ee"], ["Ff","Gg","Hh","Ii","Jj","Kk"], ["Ll","Mm","Nn","Oo","Pp"], ["Qq","Rr","Ss","Tt","Uu"], ["Vv","Ww","Xx","Yy","Zz"], [..."0123456789"]];
   let o = dtext("Trace the Alphabet", 425, 100, 64) + stext("Follow the dashes from the top, then write your own!", 425, 160, 24);
   rows.forEach((row, r) => {
@@ -720,7 +725,7 @@ function pAlphabet(){
 }
 function pFan(){
   const g = effGens(), T = poss() + " Family Fan";
-  let o = dtext(T, 550, 100, fitT(T, 900, 66)) + stext("Color every wedge. Trace every name!", 550, 152, 24);
+  let o = dtext(T, 550, 100, fitT(T, 900, 66)) + stext(lv() === 0 ? "Color every wedge. Trace every name!" : "Color every wedge. Each one is a person in your family!", 550, 152, 24);
   for (let i = 1; i <= g; i++) o += stext(`Ring ${i}:  ${GEN_RING[i - 1]}`, 78, 200 + (i - 1) * 27, 19, "start");
   o += doodle("compass", 880, 150, 130, "fan.cmp") + doodle("butterfly", 90, 340, 120, "fan.bf") + doodle("flower", 930, 620, 100, "fan.fl");
   o += fanSVG(550, 800, 505);
@@ -731,7 +736,7 @@ function pPeople(){
   const per = cfg().perPage, rows = per / 2, out = [];
   const icons = ["flower","bird","butterfly","cat","dog","fish","turtle","key"];
   for (let pg = 0; pg * per < nodes.length || pg === 0; pg++) {
-    let o = dtext(pg ? "Meet My Family, part " + (pg + 1) : "Meet My Family", 425, 100, 64) + stext("Draw each person, then trace their name!", 425, 160, 24);
+    let o = dtext(pg ? "Meet My Family, part " + (pg + 1) : "Meet My Family", 425, 100, 64) + stext(lv() === 0 ? "Draw each person, then trace their name!" : "Draw a picture of each person.", 425, 160, 24);
     const big = lv() >= 2, gx = big ? 80 : 55, cw = big ? 340 : 360, ch = ((big ? 820 : 870) - (rows - 1) * 20) / rows;
     nodes.slice(pg * per, pg * per + per).forEach((n, k) => {
       const p = S.people[n.key], x = gx + (k % 2) * (cw + 20), y = 190 + Math.floor(k / 2) * (ch + 20);
