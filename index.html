@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Family Adventure Workbook</title>
+<style>
+:root{--ink:#22304a;--bg:#fbf6ec;--card:#fff;--accent:#e8643c;--line:#e4d9c3;--muted:#6b7488}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Trebuchet MS",Verdana,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+.app{display:grid;grid-template-columns:380px 1fr;min-height:100vh}
+.side{padding:20px 18px 40px;background:#fff;border-right:2px solid var(--line);overflow-y:auto;max-height:100vh;position:sticky;top:0}
+h1{margin:0 0 4px;font-size:24px}
+h2{font-size:16px;margin:22px 0 6px}
+.sub,.hint{color:var(--muted);font-size:13px;line-height:1.4;margin:4px 0 10px}
+label{display:block;font-size:13px;font-weight:bold;margin:10px 0 0}
+input,select{width:100%;padding:8px 10px;border:2px solid var(--line);border-radius:8px;font:inherit;font-size:14px;background:#fff;color:var(--ink)}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+button{font:inherit;cursor:pointer;border:2px solid var(--ink);background:#fff;color:var(--ink);border-radius:8px;padding:8px 12px;font-weight:bold;font-size:13px}
+button:hover{background:#fff1ea}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{background:#d4552d}
+button.mini{padding:4px 8px;font-size:12px;border-width:1.5px}
+button.danger{border-color:#b33;color:#b33}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.person{border:2px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:#fffdf8}
+.person.beyond{opacity:.55}
+.person .kids{margin-left:12px;border-left:3px dotted var(--line);padding-left:8px}
+.prow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.pbtns{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:11px;color:var(--muted);margin:0 0 6px}
+.main{padding:0 20px 40px}
+.toolbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0;border-bottom:2px solid var(--line);margin-bottom:18px}
+.toolbar p{margin:0 0 8px;font-size:13px;color:var(--muted)}
+.palette{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sw{width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--line);cursor:pointer;padding:0}
+.sw.on{box-shadow:0 0 0 3px var(--ink)}
+.page{width:100%;max-width:850px;margin:0 auto 26px;background:#fff;box-shadow:0 4px 18px rgba(34,48,74,.18);border-radius:6px;overflow:hidden;aspect-ratio:850/1100}
+.page.land{max-width:1100px;aspect-ratio:1100/850}
+.page svg{display:block;width:100%;height:100%}
+.trace{fill:none;stroke:#2b3550;stroke-linejoin:round;stroke-linecap:butt}
+.t{font-family:"Trebuchet MS",Verdana,Arial,sans-serif}
+.colorable{cursor:pointer}
+.colorable:hover{filter:brightness(.96)}
+@media (max-width:860px){.app{grid-template-columns:1fr}.side{position:static;max-height:none;border-right:0;border-bottom:2px solid var(--line)}}
+@page{size:letter;margin:0}
+@page land{size:letter landscape;margin:0}
+@media print{
+  body{background:#fff}
+  .side,.toolbar{display:none!important}
+  .app{display:block}.main{padding:0}
+  .page{margin:0;box-shadow:none;border-radius:0;max-width:none;width:8.5in;height:11in;aspect-ratio:auto;break-after:page;page-break-after:always}
+  .page.land{width:11in;height:8.5in;max-width:none;page:land}
+  .colorable:hover{filter:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <h1>Family Adventure</h1>
+    <p class="sub">Turn a child's family story into a coloring and activity workbook. Everything stays in this browser.</p>
+    <label>Child's name <input id="childName" placeholder="e.g. Maya" autocomplete="off"></label>
+    <label>Born in / lives in <input id="childPlace" placeholder="e.g. Austin, Texas" autocomplete="off"></label>
+    <label>WikiTree ID <small style="font-weight:normal;color:var(--muted)">(optional)</small>
+      <input id="wtId" placeholder="e.g. Windsor-1" autocomplete="off"></label>
+    <div class="prow" style="margin-top:6px"><select id="wtMode" aria-label="Whose ID is this"><option value="child">This is the child</option><option value="parent">This is a parent / guardian</option></select><button id="wtImport">Import from WikiTree</button></div>
+    <p class="hint" id="wtMsg">Imports the public ancestors from WikiTree. WikiTree lists two biological parents, so add step-parents, guardians and others by hand afterwards.</p>
+    <label>Age range <select id="age"></select></label>
+    <p class="hint" id="ageHint"></p>
+    <h2>Parents &amp; guardians</h2>
+    <p class="hint">Add as many as the child has, in any roles. Then add each person's parents, and so on.</p>
+    <div id="tree"></div>
+    <button id="addTop" class="primary">+ Add a parent or guardian</button>
+    <div class="btns">
+      <button id="print" class="primary">Print workbook</button>
+      <button id="example">Try an example</button>
+      <button id="fresh">Start fresh</button>
+      <button id="export">Save file</button>
+      <button id="import">Open file</button>
+      <input type="file" id="file" accept=".json,application/json" hidden>
+    </div>
+    <p class="hint">To make a PDF, choose “Save as PDF” in the print window.</p>
+  </aside>
+  <main class="main">
+    <div class="toolbar">
+      <p>Tap a color, then tap any shape to color it on screen. Print it to color on paper.</p>
+      <div class="palette" id="palette"></div>
+    </div>
+    <div id="pages"></div>
+  </main>
+</div>
+<datalist id="roles">
+  <option value="Mom"><option value="Dad"><option value="Mother"><option value="Father"><option value="Parent">
+  <option value="Guardian"><option value="Step-parent"><option value="Foster parent"><option value="Adoptive parent">
+  <option value="Grandparent"><option value="Grandma"><option value="Grandpa"><option value="Great-grandparent">
+</datalist>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const LEVELS = [
+  {label:"Ages 3–5 · Little Explorers", gens:2, maxFont:40, perPage:4, stations:4, hint:"Parents and grandparents, with big simple shapes and thick lines."},
+  {label:"Ages 6–8 · Young Detectives", gens:3, maxFont:32, perPage:6, stations:6, hint:"Adds great-grandparents, small patterns and interview questions."},
+  {label:"Ages 9–12 · Family Historians", gens:4, maxFont:26, perPage:6, stations:8, hint:"Four generations, detailed patterns, a timeline and deeper questions."},
+  {label:"Ages 13+ · Heritage Explorers", gens:5, maxFont:22, perPage:6, stations:8, hint:"Five generations with fine detail and research-style questions."}
+];
+const GEN_ROLE = ["Parent","Grandparent","Great-grandparent","2nd great-grandparent","3rd great-grandparent"];
+const GEN_RING = ["Parents & guardians","Grandparents","Great-grandparents","2nd great-grandparents","3rd great-grandparents"];
+const COLORS = ["#e63946","#f4a261","#ffd23f","#7bc950","#2a9d8f","#4cc9f0","#4361ee","#9b5de5","#f15bb5","#8d5524","#2b2d42","#ffffff"];
+const INK = "#22304a";
+
+let S = blank();
+let color = COLORS[0];
+
+function blank(){ return {child:{name:"",place:"",wt:""}, wtMode:"child", level:0, people:{}, top:[], next:1, colors:{}}; }
+function addPerson(parentId){
+  const id = "p" + S.next++;
+  S.people[id] = {id, name:"", role:"", place:"", year:"", parents:[]};
+  (parentId ? S.people[parentId].parents : S.top).push(id);
+  return id;
+}
+function removePerson(id){
+  const kill = i => { S.people[i].parents.forEach(kill); delete S.people[i]; };
+  kill(id);
+  S.top = S.top.filter(i => i !== id);
+  Object.values(S.people).forEach(p => p.parents = p.parents.filter(i => i !== id));
+}
+function example(){
+  S = blank();
+  S.child = {name:"Maya", place:"Austin, Texas"};
+  S.level = 1;
+  const mk = (par, name, role, place, year) => { const id = addPerson(par); Object.assign(S.people[id], {name, role, place, year}); return id; };
+  const a = mk(null, "Jordan", "Parent", "Chicago, Illinois", "1988");
+  const b = mk(null, "Priya", "Parent", "Pune, India", "1989");
+  mk(null, "Sam", "Step-parent", "Austin, Texas", "1985");
+  const a1 = mk(a, "Rosa", "Grandparent", "Monterrey, Mexico", "1960");
+  mk(a, "Walter", "Grandparent", "Cork, Ireland", "1958");
+  mk(b, "Anita", "Grandparent", "Pune, India", "1962");
+  mk(b, "Vikram", "Grandparent", "Mumbai, India", "1959");
+  mk(S.top[2], "Ellen", "Grandparent", "Oslo, Norway", "1957");
+  mk(a1, "Luz", "Great-grandparent", "Oaxaca, Mexico", "1938");
+}
+
+/* ---------- persistence ---------- */
+function save(){ try { localStorage.setItem("family-adventure", JSON.stringify(S)); } catch(e){} }
+function load(){
+  try {
+    const raw = localStorage.getItem("family-adventure");
+    if (raw) { const d = JSON.parse(raw); if (d && d.people && Array.isArray(d.top)) { S = Object.assign(blank(), d); return true; } }
+  } catch(e){}
+  return false;
+}
+
+/* ---------- editor ---------- */
+const roleOf = (p, gen) => p.role.trim() || GEN_ROLE[Math.min(gen-1, GEN_ROLE.length-1)];
+function nodeHTML(id, gen){
+  const p = S.people[id], beyond = gen > LEVELS[S.level].gens;
+  return `<div class="person ${beyond?"beyond":""}" data-id="${id}">
+    ${beyond ? `<p class="tag">Not shown for this age range</p>` : ""}
+    ${p.wt ? `<p class="tag"><a href="https://www.wikitree.com/wiki/${encodeURIComponent(p.wt)}" target="_blank" rel="noopener">${esc(p.wt)}</a> on WikiTree</p>` : ""}
+    <div class="prow"><input data-f="name" placeholder="Name" value="${esc(p.name)}" aria-label="Name"><input data-f="role" list="roles" placeholder="${esc(GEN_ROLE[Math.min(gen-1,4)])}" value="${esc(p.role)}" aria-label="Role"></div>
+    <div class="prow"><input data-f="place" placeholder="Place of origin" value="${esc(p.place)}" aria-label="Place"><input data-f="year" placeholder="Born (year)" inputmode="numeric" value="${esc(p.year)}" aria-label="Year born"></div>
+    <div class="kids">${p.parents.map(c => nodeHTML(c, gen+1)).join("")}</div>
+    <div class="pbtns"><button class="mini" data-act="add">+ Add their parent</button><button class="mini danger" data-act="del">Remove</button></div>
+  </div>`;
+}
+function renderTree(){
+  $("#tree").innerHTML = S.top.length ? S.top.map(id => nodeHTML(id, 1)).join("") : `<p class="hint">No one yet. Add a parent or guardian to begin.</p>`;
+}
+function renderControls(){
+  $("#childName").value = S.child.name;
+  $("#childPlace").value = S.child.place;
+  $("#wtId").value = S.child.wt || "";
+  $("#wtMode").value = S.wtMode || "child";
+  $("#age").innerHTML = LEVELS.map((l,i) => `<option value="${i}" ${i===S.level?"selected":""}>${l.label}</option>`).join("");
+  $("#ageHint").textContent = LEVELS[S.level].hint;
+}
+function renderAll(){ renderControls(); renderTree(); renderPages(); }
+let timer;
+const later = () => { clearTimeout(timer); timer = setTimeout(() => { renderPages(); save(); }, 150); };
+
+$("#tree").addEventListener("input", e => {
+  const f = e.target.dataset.f, id = e.target.closest(".person")?.dataset.id;
+  if (f && id && S.people[id]) { S.people[id][f] = e.target.value; later(); }
+});
+$("#tree").addEventListener("click", e => {
+  const act = e.target.dataset.act, id = e.target.closest(".person")?.dataset.id;
+  if (!act || !id) return;
+  if (act === "add") addPerson(id);
+  if (act === "del") removePerson(id);
+  renderTree(); renderPages(); save();
+});
+$("#addTop").onclick = () => { addPerson(null); renderTree(); renderPages(); save(); };
+$("#childName").oninput = e => { S.child.name = e.target.value; later(); };
+$("#childPlace").oninput = e => { S.child.place = e.target.value; later(); };
+$("#age").onchange = e => { S.level = +e.target.value; renderControls(); renderTree(); renderPages(); save(); };
+$("#wtId").oninput = e => { S.child.wt = e.target.value; save(); };
+$("#wtMode").onchange = e => { S.wtMode = e.target.value; save(); };
+const wtFirst = p => (p.RealName || p.FirstName || "").trim().split(/\s+/)[0] || "Private";
+const wtPlace = loc => { const a = String(loc || "").split(",").map(x => x.trim()).filter(Boolean); return a.length > 2 ? a[0] + ", " + a[a.length - 1] : a.join(", "); };
+const wtYear = d => { const y = String(d || "").slice(0, 4); return /^[1-9]\d{3}$/.test(y) ? y : ""; };
+async function importWT(){
+  const msg = t => { $("#wtMsg").textContent = t; };
+  const id = $("#wtId").value.trim().replace(/^.*wikitree\.com\/wiki\//i, "").replace(/\s+/g, "");
+  if (!id) return msg("Type a WikiTree ID first, like Windsor-1.");
+  if (S.top.length && !confirm("Replace the family you've entered with the one from WikiTree?")) return;
+  const mode = $("#wtMode").value, depth = Math.max(1, cfg().gens - (mode === "parent" ? 1 : 0));
+  const url = "https://api.wikitree.com/api.php?action=getAncestors&key=" + encodeURIComponent(id) + "&depth=" + depth
+    + "&fields=Id,Name,FirstName,RealName,BirthDate,BirthLocation,Father,Mother,IsLiving";
+  msg("Asking WikiTree…");
+  let list;
+  let st = ""; try { const r = await fetch(url, {credentials:"include"}), j = (await r.json())[0] || {}; list = j.ancestors || []; st = j.status || ""; }
+  catch (e) { return msg("Couldn't reach WikiTree. Importing works when this app is opened from apps.wikitree.com. You can still type the family in by hand."); }
+  const byId = new Map(list.map(p => [p.Id, p])), root = list.find(p => String(p.Name).toLowerCase() === id.toLowerCase() || String(p.Id) === id);
+  if (!list.length && /limit/i.test(st)) return msg("WikiTree says too many requests right now. Wait a minute and try again.");
+  if (!root) return msg("WikiTree didn't return a public profile for “" + id + "”. Check the ID, or the profile may be private.");
+  const make = p => {
+    const pid = "p" + S.next++;
+    S.people[pid] = {id:pid, name:wtFirst(p), role:"", place:wtPlace(p.BirthLocation), year:wtYear(p.BirthDate), wt:p.Name, parents:[]};
+    [p.Father, p.Mother].forEach(x => { if (x && byId.has(x)) S.people[pid].parents.push(make(byId.get(x))); });
+    return pid;
+  };
+  S.people = {}; S.top = []; S.colors = {};
+  if (mode === "child") {
+    if (!S.child.name.trim()) S.child.name = wtFirst(root);
+    if (!S.child.place.trim()) S.child.place = wtPlace(root.BirthLocation);
+    [root.Father, root.Mother].forEach(x => { if (x && byId.has(x)) S.top.push(make(byId.get(x))); });
+  } else S.top.push(make(root));
+  S.child.wt = id; S.wtMode = mode;
+  renderAll(); save();
+  msg(S.top.length ? "Imported " + Object.keys(S.people).length + " people from WikiTree. Add any other parents or guardians by hand." : "That profile has no public parents on WikiTree. Add the family by hand.");
+}
+$("#wtImport").onclick = importWT;
+$("#print").onclick = () => window.print();
+$("#example").onclick = () => { example(); renderAll(); save(); };
+$("#fresh").onclick = () => { if (confirm("Clear everything and start over?")) { S = blank(); renderAll(); save(); } };
+$("#export").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], {type:"application/json"}));
+  a.download = (S.child.name.trim() || "family") + "-adventure.json";
+  a.click();
+};
+$("#import").onclick = () => $("#file").click();
+$("#file").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(t => {
+    const d = JSON.parse(t);
+    if (!d || typeof d.people !== "object" || !Array.isArray(d.top)) throw 0;
+    S = Object.assign(blank(), d); renderAll(); save();
+  }).catch(() => alert("That file doesn't look like a Family Adventure file."));
+  e.target.value = "";
+};
+
+/* ---------- palette & coloring ---------- */
+function renderPalette(){
+  $("#palette").innerHTML = COLORS.map(c => `<button class="sw ${c===color?"on":""}" data-c="${c}" style="background:${c}" title="${c==="#ffffff"?"Eraser":"Color"}" aria-label="${c==="#ffffff"?"Eraser":"Color "+c}"></button>`).join("")
+    + `<button class="mini" id="clearColors">Clear colors</button>`;
+}
+$("#palette").addEventListener("click", e => {
+  if (e.target.id === "clearColors") { S.colors = {}; renderPages(); save(); return; }
+  const c = e.target.dataset.c; if (c) { color = c; renderPalette(); }
+});
+$("#pages").addEventListener("click", e => {
+  const t = e.target.closest(".colorable"); if (!t) return;
+  if (color === "#ffffff") delete S.colors[t.dataset.k]; else S.colors[t.dataset.k] = color;
+  t.setAttribute("fill", color);
+  save();
+});
+
+/* ---------- drawing helpers ---------- */
+const lv = () => S.level;
+const cfg = () => LEVELS[S.level];
+const cname = () => S.child.name.trim() || "Your Name";
+const poss = () => S.child.name.trim() ? S.child.name.trim() + "’s" : "My";
+const nm = p => p.name.trim() || "?";
+const fit = (t, w, max, cw = .64) => Math.max(8, Math.min(max, w / (Math.max(t.length, 1) * cw)));
+const f1 = n => n.toFixed(1);
+const C = k => `class="colorable" data-k="${k}" fill="${S.colors[k] || "#fff"}"`;
+
+/* ---------- single-stroke tracing letters ----------
+   Each glyph is one centerline path (cap height 100, baseline y=100, x-height y=50, descenders to 150),
+   drawn dashed so a child can follow the line, like a handwriting worksheet. Latin letters only (accents are dropped). */
+const TG = {
+  A:[70,"M0 100 L35 0 L70 100 M12 66 H58"], B:[56,"M0 0 V100 M0 0 H30 C54 0 54 47 30 49 H0 M30 49 C60 49 60 100 30 100 H0"],
+  C:[64,"M62 18 C48 -6 4 -2 4 50 C4 102 48 106 62 82"], D:[60,"M0 0 V100 M0 0 H24 C72 0 72 100 24 100 H0"],
+  E:[50,"M50 0 H0 V100 H50 M0 48 H38"], F:[48,"M48 0 H0 V100 M0 48 H36"],
+  G:[66,"M62 18 C48 -6 4 -2 4 50 C4 102 52 106 62 80 V54 H38"], H:[60,"M0 0 V100 M60 0 V100 M0 48 H60"],
+  I:[30,"M0 0 H30 M15 0 V100 M0 100 H30"], J:[40,"M34 0 V68 C34 104 4 106 2 78"],
+  K:[60,"M0 0 V100 M58 0 L0 58 M18 40 L60 100"], L:[46,"M0 0 V100 H46"],
+  M:[76,"M0 100 V0 L38 70 L76 0 V100"], N:[62,"M0 100 V0 L62 100 V0"],
+  O:[70,"M35 0 C-10 0 -10 100 35 100 C80 100 80 0 35 0"], P:[54,"M0 100 V0 H28 C58 0 58 54 28 54 H0"],
+  Q:[70,"M35 0 C-10 0 -10 100 35 100 C80 100 80 0 35 0 M44 72 L72 106"], R:[58,"M0 100 V0 H28 C58 0 58 54 28 54 H0 M26 54 L58 100"],
+  S:[52,"M48 16 C40 -4 6 -2 6 24 C6 50 50 46 50 76 C50 104 10 104 2 82"], T:[56,"M0 0 H56 M28 0 V100"],
+  U:[60,"M0 0 V62 C0 112 60 112 60 62 V0"], V:[64,"M0 0 L32 100 L64 0"],
+  W:[90,"M0 0 L22 100 L45 20 L68 100 L90 0"], X:[60,"M0 0 L60 100 M60 0 L0 100"],
+  Y:[60,"M0 0 L30 50 L60 0 M30 50 V100"], Z:[56,"M0 0 H56 L0 100 H56"],
+  a:[44,"M44 50 V100 M44 62 C40 46 4 44 4 75 C4 106 40 104 44 88"], b:[44,"M0 0 V100 M0 62 C6 46 42 46 42 75 C42 106 6 104 0 88"],
+  c:[40,"M40 62 C32 46 2 48 2 75 C2 104 32 106 40 88"], d:[44,"M44 0 V100 M44 62 C38 46 2 46 2 75 C2 106 38 104 44 88"],
+  e:[44,"M2 75 H42 C42 48 4 40 2 75 C2 106 34 108 42 90"], f:[30,"M32 4 C16 -8 10 6 10 22 V100 M0 50 H28"],
+  g:[44,"M44 50 V120 C44 156 6 150 2 130 M44 62 C38 46 2 46 2 75 C2 106 38 104 44 88"], h:[42,"M0 0 V100 M0 66 C4 44 42 44 42 66 V100"],
+  i:[14,"M7 50 V100 M7 24 V28"], j:[20,"M12 50 V128 C12 156 -2 152 -4 138 M12 24 V28"],
+  k:[40,"M0 0 V100 M38 50 L0 80 M12 72 L40 100"], l:[14,"M7 0 V100"],
+  m:[70,"M0 50 V100 M0 66 C4 44 35 44 35 66 V100 M35 66 C39 44 70 44 70 66 V100"], n:[42,"M0 50 V100 M0 66 C4 44 42 44 42 66 V100"],
+  o:[44,"M22 50 C-6 50 -6 100 22 100 C50 100 50 50 22 50"], p:[44,"M0 50 V150 M0 62 C6 46 42 46 42 75 C42 106 6 104 0 88"],
+  q:[44,"M44 50 V150 M44 62 C38 46 2 46 2 75 C2 106 38 104 44 88"], r:[30,"M0 50 V100 M0 68 C4 48 20 46 30 50"],
+  s:[36,"M32 58 C26 46 4 46 4 62 C4 78 34 72 34 88 C34 106 8 104 2 92"], t:[30,"M10 14 V88 C10 102 20 102 30 98 M0 50 H28"],
+  u:[42,"M0 50 V84 C0 110 38 110 42 80 M42 50 V100"], v:[44,"M0 50 L22 100 L44 50"],
+  w:[66,"M0 50 L16 100 L33 60 L50 100 L66 50"], x:[44,"M0 50 L44 100 M44 50 L0 100"],
+  y:[44,"M0 50 L22 100 M44 50 L18 128 C12 142 4 146 -2 144"], z:[40,"M0 50 H40 L0 100 H40"],
+  0:[50,"M25 0 C-8 0 -8 100 25 100 C58 100 58 0 25 0"], 1:[30,"M4 20 L20 0 V100"],
+  2:[50,"M2 22 C6 -4 48 -4 48 28 C48 52 2 76 2 100 H50"], 3:[50,"M4 10 C16 -6 48 -2 46 24 C44 44 24 46 20 48 C48 48 52 100 24 100 C12 100 4 92 2 84"],
+  4:[54,"M40 100 V0 L0 70 H54"], 5:[50,"M46 0 H8 L4 46 C30 36 52 52 48 76 C44 106 12 104 2 88"],
+  6:[50,"M42 6 C20 -6 2 30 2 66 C2 112 48 108 48 74 C48 40 6 44 2 70"], 7:[50,"M0 0 H50 L18 100"],
+  8:[50,"M25 48 C-2 44 -2 0 25 0 C52 0 52 44 25 48 C-4 54 -4 100 25 100 C54 100 54 54 25 48"],
+  9:[50,"M48 30 C48 -4 2 -2 2 30 C2 62 48 62 48 30 C48 70 38 98 10 100"],
+  " ":[34,""], ".":[10,"M4 97 V100"], ",":[10,"M5 96 L1 112"], "'":[10,"M5 0 V20"], "-":[30,"M2 60 H28"],
+  "?":[40,"M2 24 C4 -4 38 -4 38 24 C38 44 20 46 20 66 V76 M20 96 V100"], "!":[10,"M5 0 V72 M5 96 V100"]
+};
+const TGAP = 14;
+const tGlyphs = txt => [...String(txt).normalize("NFD").replace(/[̀-ͯ]/g, "")].map(ch => {
+  ch = ({"’":"'","‘":"'","–":"-","—":"-","_":"-"})[ch] || ch;
+  const g = TG[ch] || TG["?"]; return {w:g[0], d:g[1]};
+});
+const tUnits = txt => { const g = tGlyphs(txt); return g.reduce((a, x) => a + x.w, 0) + TGAP * Math.max(0, g.length - 1); };
+function gEl(g, tf, cap){
+  if (!g.d) return "";
+  const sc = cap / 100, px = Math.max(1.9, cap / 28), a = Math.max(4.5, cap / 8);
+  return `<path d="${g.d}" transform="${tf} scale(${sc.toFixed(4)}) translate(0 -100)" class="trace" pointer-events="none" style="stroke-width:${(px / sc).toFixed(2)};stroke-dasharray:${(a / sc).toFixed(1)} ${(a * .75 / sc).toFixed(1)}"/>`;
+}
+function traceText(txt, x, base, cap, anchor = "middle"){
+  const sc = cap / 100, total = tUnits(txt) * sc;
+  let cx = anchor === "start" ? x : anchor === "end" ? x - total : x - total / 2, o = "";
+  tGlyphs(txt).forEach(g => { o += gEl(g, `translate(${f1(cx)} ${f1(base)})`, cap); cx += (g.w + TGAP) * sc; });
+  return o;
+}
+/* a name on worksheet guide lines: cap line, dashed x-height line, baseline */
+function guides(x1, x2, base, cap){
+  return `<line x1="${x1}" y1="${f1(base - cap)}" x2="${x2}" y2="${f1(base - cap)}" stroke="#9db4e0" stroke-width="2"/>`
+    + `<line x1="${x1}" y1="${f1(base - cap / 2)}" x2="${x2}" y2="${f1(base - cap / 2)}" stroke="#9db4e0" stroke-width="1.6" stroke-dasharray="9 7"/>`
+    + `<line x1="${x1}" y1="${f1(base)}" x2="${x2}" y2="${f1(base)}" stroke="#6f8fd1" stroke-width="2.4"/>`;
+}
+const dtext = (t, x, y, size, anchor = "middle") => traceText(t, x, y + size * .36, size * .72, anchor);
+const fitT = (t, w, max) => Math.max(8, Math.min(max, w / (tUnits(t) * .0072)));
+const stext = (t, x, y, size, anchor = "middle", fill = INK, extra = "") =>
+  `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" dominant-baseline="central" class="t" fill="${fill}" ${extra}>${esc(t)}</text>`;
+
+function frame(W = 850, H = 1100){
+  let o = `<rect width="${W}" height="${H}" fill="#fff"/>`;
+  if (lv() <= 1) {
+    o += `<rect x="26" y="26" width="${W - 52}" height="${H - 52}" rx="38" fill="none" stroke="${INK}" stroke-width="${lv() ? 5 : 8}"/>`;
+  } else {
+    o += `<rect x="22" y="22" width="${W - 44}" height="${H - 44}" rx="14" fill="none" stroke="${INK}" stroke-width="4"/>`
+       + `<rect x="54" y="54" width="${W - 108}" height="${H - 108}" rx="6" fill="none" stroke="${INK}" stroke-width="2"/>`;
+    for (let x = 80; x <= W - 80; x += 23) o += `<circle cx="${x}" cy="38" r="3" fill="${INK}"/><circle cx="${x}" cy="${H - 38}" r="3" fill="${INK}"/>`;
+    for (let y = 80; y <= H - 80; y += 23) o += `<circle cx="38" cy="${y}" r="3" fill="${INK}"/><circle cx="${W - 38}" cy="${y}" r="3" fill="${INK}"/>`;
+  }
+  return o;
+}
+const page = (inner, land) => { const W = land ? 1100 : 850, H = land ? 850 : 1100; return `<section class="page${land ? " land" : ""}"><svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${frame(W, H)}${inner}</svg></section>`; };
+
+/* ---------- doodles ----------
+   100x100 boxes, hand-placed curves. Line weight has a hierarchy: outline > inner line > fine detail.
+   Closed shapes are the colorable regions; inner lines are never colorable. Detail grows with age. */
+const DOODLES = {};
+function doodle(type, x, y, s, key){
+  const L = lv(), sw = [5, 4, 3, 2.6][L] * 100 / s;
+  const k = n => C(key + "." + n);
+  const H = {
+    L,
+    R: (n, d) => `<path d="${d}" ${k(n)}/>`,
+    RM: (n, d) => `<path d="${d}" transform="translate(100 0) scale(-1 1)" ${k(n)}/>`,
+    RC: (n, cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r}" ${k(n)}/>`,
+    RT: (n, d, tf) => `<path d="${d}" transform="${tf}" ${k(n)}/>`,
+    I: d => `<path d="${d}" fill="none" stroke-width="${f1(sw * .6)}" pointer-events="none"/>`,
+    F: d => L >= 1 ? `<path d="${d}" fill="none" stroke-width="${f1(sw * .38)}" pointer-events="none"/>` : "",
+    dot: (cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${INK}" stroke="none" pointer-events="none"/>`,
+    wd: (cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff" stroke="none" pointer-events="none"/>`,
+    ring: (cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff" pointer-events="none"/>`,
+    rot: (a, cx, cy, inner) => `<g transform="rotate(${a} ${cx} ${cy})">${inner}</g>`,
+    cloud: (n, cx, cy, sc) => H.RT(n, "M0 10 C-5 10 -5 2 3 2 C4 -5 15 -5 16 2 C24 0 26 10 19 10Z", `translate(${cx} ${cy}) scale(${sc})`)
+  };
+  const fn = DOODLES[type];
+  const g = fn ? fn(H) : "";
+  return `<g transform="translate(${x} ${y}) scale(${s / 100})" stroke="${INK}" stroke-width="${f1(sw)}" stroke-linejoin="round" stroke-linecap="round">${g}</g>`;
+}
+const starPts = (cx, cy, ro, ri) => Array.from({length:10}, (_, i) => { const a = -Math.PI/2 + i*Math.PI/5, r = i % 2 ? ri : ro; return [cx + r*Math.cos(a), cy + r*Math.sin(a)]; });
+const poly = pts => "M" + pts.map(p => f1(p[0]) + " " + f1(p[1])).join(" L") + "Z";
+
+DOODLES.sun = ({L, R, I, F, dot, RC}) => {
+  const n = L >= 2 ? 12 : 8, h = L >= 2 ? .15 : .2; let g = "";
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2, tip = (L >= 2 && i % 2) ? 40 : 47, P = (r, aa) => f1(50 + r * Math.cos(aa)) + " " + f1(50 + r * Math.sin(aa));
+    g += R("r" + i, `M${P(29, a - h)} L${P(tip, a)} L${P(29, a + h)}Z`);
+  }
+  g += RC("c", 50, 50, 26);
+  if (L >= 2) g += RC("c2", 50, 50, 16) + I("M50 50 m-6 0 a6 6 0 1 1 6 6") + dot(50, 50, 1.6);
+  else g += dot(42, 46, 2.8) + dot(58, 46, 2.8) + I("M39 55 Q50 67 61 55") + F("M33 54 q3 3 6 0 M61 54 q3 3 6 0");
+  return g;
+};
+DOODLES.house = ({L, R, I, F, dot}) => {
+  let g = "";
+  if (L >= 1) g += R("ch", "M66 22 H78 V42 H66Z") + I("M72 17 C66 13 78 10 72 5") + (L >= 2 ? F("M66 28 H78 M66 34 H78") : "");
+  g += R("body", "M18 47 H82 V90 H18Z") + R("roof", "M8 51 L50 15 L92 51 Q50 44 8 51Z");
+  g += R("door", "M43 90 V66 Q50 58 57 66 V90Z") + dot(53, 78, 1.6);
+  g += R("w1", "M23 56 H38 V70 H23Z") + R("w2", "M62 56 H77 V70 H62Z");
+  if (L >= 1) g += I("M30.5 56 V70 M23 63 H38 M69.5 56 V70 M62 63 H77");
+  if (L >= 2) {
+    for (const y of [26, 33, 40]) { const half = (y - 15) * 1.1; for (let x = 50 - half + 5; x < 50 + half - 9; x += 8) g += F(`M${f1(x)} ${y} q4 5 8 0`); }
+    g += R("fb1", "M21 71 H40 V76 H21Z") + R("fb2", "M60 71 H79 V76 H60Z") + F("M18 80 H41 M59 80 H82 M18 86 H41 M59 86 H82");
+  }
+  return g + I("M4 90 H96") + F("M8 90 l1 -4 l2 4 M86 90 l1 -4 l2 4");
+};
+DOODLES.heart = ({L, R, I, F}) => {
+  const d = "M50 88 C10 58 8 22 32 20 C42 19 50 27 50 34 C50 27 58 19 68 20 C92 22 90 58 50 88Z";
+  let g = R("h", d);
+  if (L >= 1) g += I("M24 30 Q19 38 23 47");
+  if (L >= 2) g += R("h2", "M50 78 C22 56 20 34 34 32 C42 31 50 38 50 44 C50 38 58 31 66 32 C80 34 78 56 50 78Z") + F("M50 44 V66");
+  return g;
+};
+DOODLES.star = ({L, R, I, F, dot}) => {
+  const p = starPts(50, 53, 46, 19), c = [50, 53]; let g = "";
+  if (L >= 2) {
+    for (let j = 0; j < 5; j++) {
+      const o = p[2 * j], i1 = p[2 * j + 1], o2 = p[(2 * j + 2) % 10];
+      g += R("a" + j, poly([c, o, i1])) + R("b" + j, poly([c, i1, o2]));
+    }
+  } else {
+    g += R("s", poly(p));
+    if (L <= 1) g += dot(43, 50, 2.6) + dot(57, 50, 2.6) + I("M42 60 Q50 68 58 60");
+  }
+  return g;
+};
+DOODLES.tree = ({L, R, RC, I, F}) => {
+  let g = R("trunk", "M43 58 C44 72 42 82 36 92 H64 C58 82 56 72 57 58Z") + F("M47 70 V84 M53 72 V86");
+  g += R("crown", "M20 60 C6 58 6 36 22 34 C20 16 44 8 54 18 C66 8 90 20 80 36 C96 38 94 60 78 60 C70 66 28 66 20 60Z");
+  if (L >= 1) g += RC("a1", 34, 40, 4.5) + RC("a2", 64, 44, 4.5) + RC("a3", 48, 54, 4.5) + RC("a4", 70, 28, 4.5);
+  if (L >= 2) g += F("M24 28 q6 -8 14 -6 M58 24 q8 -4 12 2 M20 46 q5 -3 9 0 M72 52 q5 -3 9 0") + I("M36 92 q-8 2 -14 0 M64 92 q8 2 14 0") + F("M10 92 l1 -4 l2 4 M84 92 l1 -4 l2 4");
+  return g;
+};
+DOODLES.boat = ({L, R, RC, I, F, dot}) => {
+  let g = I("M50 10 V66") + R("s1", "M48 14 C30 26 24 44 22 60 H48Z") + R("s2", "M52 22 C66 32 76 46 80 60 H52Z") + R("f", "M50 10 L65 15.5 L50 21Z");
+  g += R("hull", "M10 62 H90 C86 76 78 84 68 84 H32 C22 84 14 76 10 62Z");
+  if (L >= 1) g += I("M12.5 69 H87.5");
+  if (L >= 2) g += RC("p1", 34, 77, 3.4) + RC("p2", 50, 77, 3.4) + RC("p3", 66, 77, 3.4) + F("M30 28 C34 36 32 48 30 56 M70 36 C68 44 70 52 72 56");
+  g += R("w", "M2 86 Q9 80 16 86 T30 86 T44 86 T58 86 T72 86 T86 86 T98 86 V96 H2Z");
+  if (L >= 1) g += F("M14 92 q4 -3 8 0 M60 92 q4 -3 8 0");
+  return g;
+};
+DOODLES.plane = ({L, R, RT, I, F, ring, cloud}) => {
+  let g = "";
+  if (L >= 1) g += cloud("c1", 4, 8, 1.2) + cloud("c2", 66, 78, 1.1);
+  g += R("tail", "M12 46 L4 22 H20 L34 42Z") + R("body", "M8 52 C8 42 24 38 52 38 C80 38 94 44 94 52 C94 60 80 64 52 64 C24 64 8 62 8 52Z");
+  if (L >= 1) g += R("cock", "M76 42 C85 42 90 46 91.5 50 H75Z") + I("M10 57 H92");
+  g += R("wing", "M44 52 L26 80 H46 L72 52Z");
+  if (L >= 1) g += R("eng", "M42 63 H58 Q62 68 58 72 H42 Q38 68 42 63Z");
+  const wx = L === 0 ? [28, 46, 62] : [24, 33, 42, 51, 60, 69];
+  wx.forEach(x => g += ring(x, 48, L === 0 ? 4 : 2.6));
+  if (L >= 2) g += F("M52 38 V64 M14 56 L10 52 M80 42 V64");
+  return g;
+};
+DOODLES.suitcase = ({L, R, RC, I, F, dot}) => {
+  let g = `<path d="M38 28 V20 Q38 14 44 14 H56 Q62 14 62 20 V28" fill="none"/>`;
+  g += R("body", "M12 30 H88 Q92 30 92 34 V82 Q92 86 88 86 H12 Q8 86 8 82 V34 Q8 30 12 30Z");
+  g += R("s1", "M28 30 H36 V86 H28Z") + R("s2", "M64 30 H72 V86 H64Z") + R("latch", "M44 48 H56 V59 H44Z") + dot(50, 53.5, 1.7);
+  if (L >= 1) g += R("st1", poly(starPts(18, 64, 8, 3.6))) + RC("st2", 80, 44, 6.5);
+  if (L >= 2) g += R("st3", "M74 66 H88 V76 H74Z") + I("M81 66 V76 M74 71 H88") + F("M8 42 H28 M72 42 H92 M8 78 H28 M72 78 H92") + F("M12 34 h.1 M88 34 h.1 M12 82 h.1 M88 82 h.1");
+  return g;
+};
+DOODLES.compass = ({L, R, RC, I, F, dot, rot}) => {
+  let g = RC("ring", 50, 50, 44) + RC("face", 50, 50, 35);
+  if (L >= 1) for (let i = 0; i < (L >= 2 ? 24 : 12); i++) { const a = i * Math.PI * 2 / (L >= 2 ? 24 : 12); g += I(`M${f1(50 + 36 * Math.cos(a))} ${f1(50 + 36 * Math.sin(a))} L${f1(50 + 42 * Math.cos(a))} ${f1(50 + 42 * Math.sin(a))}`); }
+  if (L >= 2) g += rot(45, 50, 50, R("d1", "M50 30 L55 50 L45 50Z") + R("d2", "M50 70 L55 50 L45 50Z") + R("d3", "M70 50 L50 55 L50 45Z") + R("d4", "M30 50 L50 55 L50 45Z"));
+  g += R("n", "M50 16 L59 50 L41 50Z") + R("sth", "M50 84 L59 50 L41 50Z") + R("e", "M84 50 L50 59 L50 41Z") + R("w", "M16 50 L50 59 L50 41Z");
+  return g + dot(50, 50, 3.4);
+};
+DOODLES.globe = ({L, R, RC, I, F}) => {
+  let g = `<path d="M14 54 C14 90 86 90 86 54" fill="none"/>` + R("base", "M32 94 H68 L63 85 H37Z") + RC("g", 50, 44, 34);
+  g += R("c1", "M30 28 C36 20 46 22 48 30 C46 38 52 42 46 48 C40 50 34 44 30 38 C26 34 28 30 30 28Z") + R("c2", "M56 42 C64 36 74 40 72 50 C70 58 64 66 58 62 C56 54 52 48 56 42Z");
+  if (L >= 1) g += R("c3", "M27 54 C31 51 35 56 33 62 C28 64 24 58 27 54Z") + F("M50 10 C34 22 34 66 50 78 C66 66 66 22 50 10 M16 44 H84");
+  if (L >= 2) g += F("M22 26 Q50 32 78 26 M22 62 Q50 56 78 62 M50 10 V78");
+  return g;
+};
+DOODLES.cat = ({L, R, I, F, dot, wd}) => {
+  let g = R("tail", "M68 92 C88 94 96 70 86 58 C84 56 80 58 82 62 C88 72 82 82 66 82Z");
+  g += R("body", "M30 94 C22 76 28 56 50 54 C72 56 78 76 70 94Z") + R("belly", "M39 94 C35 80 41 68 50 68 C59 68 65 80 61 94Z");
+  g += R("earL", "M28 36 L25 11 L45 24Z") + R("earR", "M72 36 L75 11 L55 24Z") + R("head", "M26 40 C26 28 34 22 50 22 C66 22 74 28 74 40 C74 52 64 58 50 58 C36 58 26 52 26 40Z");
+  g += I("M30 28 L28 18 L37 24 M70 28 L72 18 L63 24");
+  g += dot(41, 40, 4) + dot(59, 40, 4) + wd(42.4, 38.6, 1.4) + wd(60.4, 38.6, 1.4);
+  g += `<path d="M47 46 H53 L50 50Z" fill="${INK}"/>` + I("M50 50 V53 M50 53 Q45 57 41 53 M50 53 Q55 57 59 53");
+  g += I("M42 94 V86 M58 94 V86");
+  if (L >= 1) g += F("M16 44 L32 47 M16 52 L32 51 M84 44 L68 47 M84 52 L68 51") + F("M45 26 V32 M50 25 V31 M55 26 V32");
+  if (L >= 2) g += R("collar", "M34 57 Q50 66 66 57 L65 62 Q50 71 35 62Z") + R("bell", "M47 68 a3.5 3.5 0 1 0 6 0 a3.5 3.5 0 1 0 -6 0") + F("M33 78 Q40 74 46 80 M67 78 Q60 74 54 80 M26 40 C28 36 30 34 33 33");
+  return g;
+};
+DOODLES.dog = ({L, R, I, F, dot, wd}) => {
+  let g = I("M72 82 C84 80 90 70 88 60") + R("body", "M30 96 C24 78 30 60 50 58 C70 60 76 78 70 96Z") + I("M42 96 V84 M58 96 V84");
+  g += R("head", "M28 36 C28 24 38 20 50 20 C62 20 72 24 72 36 C72 50 64 58 50 58 C36 58 28 50 28 36Z");
+  g += R("earL", "M30 26 C14 24 10 46 18 58 C26 56 32 46 32 34Z") + R("earR", "M70 26 C86 24 90 46 82 58 C74 56 68 46 68 34Z");
+  g += R("snout", "M38 44 C38 38 62 38 62 44 C62 54 56 58 50 58 C44 58 38 54 38 44Z") + R("tongue", "M46 57 Q50 69 54 57Z");
+  g += `<path d="M45 42 H55 Q55 48 50 48 Q45 48 45 42Z" fill="${INK}"/>` + I("M50 48 V53 M43 53 Q50 60 57 53");
+  g += dot(41, 34, 3.2) + dot(59, 34, 3.2) + wd(42, 33, 1.1) + wd(60, 33, 1.1);
+  if (L >= 1) g += R("spot", "M54 26 C62 24 68 28 66 36 C60 38 54 34 54 26Z") + F("M44 42 h.1 M56 42 h.1");
+  if (L >= 2) g += R("collar", "M34 60 Q50 68 66 60 L65 65 Q50 73 35 65Z") + R("tag", "M47 72 a3.5 3.5 0 1 0 7 0 a3.5 3.5 0 1 0 -7 0") + F("M20 36 C20 44 22 50 24 54 M80 36 C80 44 78 50 76 54 M36 76 q5 -4 9 2 M64 76 q-5 -4 -9 2");
+  return g;
+};
+DOODLES.bird = ({L, R, I, F, dot, wd}) => {
+  let g = R("branch", "M2 80 C30 78 60 82 98 78 V85 C60 89 30 85 2 87Z");
+  g += R("tail", "M70 62 L96 68 L93 78 L68 72Z") + I("M72 66 L92 72");
+  g += R("body", "M22 52 C22 38 40 32 54 38 C72 44 80 58 72 70 C64 80 40 82 30 72 C24 66 22 60 22 52Z");
+  g += R("wing", "M44 50 C58 44 74 54 80 64 C66 72 52 68 44 50Z") + I("M52 54 C60 52 68 56 72 62");
+  g += R("head", "M20 40 C20 30 28 25 35 25 C43 25 49 31 49 39 C49 47 42 53 34 53 C26 53 20 48 20 40Z") + R("beak", "M21 36 L7 41 L21 45Z");
+  g += dot(31, 37, 3) + wd(32, 36, 1);
+  g += I("M42 79 V86 M52 80 V86");
+  if (L >= 1) g += R("leaf1", "M14 80 C10 70 20 64 28 68 C26 76 20 80 14 80Z") + R("leaf2", "M80 80 C84 70 94 66 98 72 C96 80 88 82 80 80Z") + I("M16 78 L24 70");
+  if (L >= 2) g += F("M30 60 q4 4 8 0 M38 66 q4 4 8 0 M46 70 q4 4 8 0 M28 68 q4 4 8 0 M60 52 q4 4 8 0") + F("M24 48 q3 -3 6 0 M84 71 L92 70");
+  return g;
+};
+DOODLES.butterfly = ({L, R, RM, RC, I, F, dot}) => {
+  const both = (n, d) => R(n + "L", d) + RM(n + "R", d);
+  let g = both("up", "M50 46 C40 20 14 10 8 28 C4 42 24 54 50 52Z") + both("lo", "M50 52 C30 54 14 62 20 78 C26 90 44 82 50 62Z");
+  g += R("bd", "M46 32 C46 24 54 24 54 32 V78 C54 85 46 85 46 78Z");
+  g += `<path d="M48 26 C44 16 38 12 34 14 M52 26 C56 16 62 12 66 14" fill="none"/>` + dot(34, 14, 2.2) + dot(66, 14, 2.2);
+  g += RC("s1", 26, 30, 5) + RC("s1b", 74, 30, 5);
+  if (L >= 1) g += RC("s2", 30, 72, 4) + RC("s2b", 70, 72, 4) + F("M48 48 C36 32 22 28 14 30 M48 50 C34 46 22 46 12 40 M48 58 C36 60 28 66 24 74");
+  if (L >= 2) g += RC("s3", 26, 30, 9) + F("M10 28 q-1 8 6 14 M90 28 q1 8 -6 14") + RC("s4", 74, 30, 9) + F("M22 80 q8 4 14 -2 M78 80 q-8 4 -14 -2");
+  return g;
+};
+DOODLES.fish = ({L, R, RC, I, F, dot, wd}) => {
+  let g = R("tail", "M68 50 L93 28 C88 42 88 58 93 72Z") + R("fin1", "M36 33 C42 17 58 19 62 35Z") + R("fin2", "M40 67 C46 81 58 81 60 65Z");
+  g += R("body", "M8 50 C20 30 50 26 72 44 C74 48 74 52 72 56 C50 74 20 70 8 50Z") + I("M27 37 C33 47 33 53 27 63");
+  g += RC("eye", 20, 46, 4.5) + dot(20.5, 46, 2) + I("M9 53 Q13 56 17 53");
+  g += RC("b1", 14, 22, 5) + RC("b2", 26, 12, 3.4);
+  if (L >= 1) g += F("M40 40 q5 5 0 10 M48 38 q5 6 0 12 M56 40 q5 5 0 10 M44 56 q4 4 8 0");
+  if (L >= 2) g += R("weed", "M70 96 C64 84 76 76 70 64 C84 76 76 86 80 96Z") + R("weed2", "M86 96 C82 88 90 84 86 76 C96 84 92 90 96 96Z") + F("M76 40 q8 4 14 -4 M76 56 q8 -4 14 4");
+  return g;
+};
+DOODLES.turtle = ({L, R, I, F, dot, wd}) => {
+  let g = R("head", "M80 62 C88 50 98 54 98 62 C98 70 90 72 80 70Z") + dot(92, 59, 2) + I("M94 66 Q97 66 98 63");
+  g += R("legB", "M26 68 H42 V86 H26Z") + R("legF", "M62 68 H78 V86 H62Z") + R("tailT", "M14 66 L4 72 L16 72Z");
+  g += R("shell", "M12 68 C12 36 32 24 52 24 C74 24 90 40 90 68Z") + R("rim", "M10 68 H92 C90 77 12 77 10 68Z");
+  g += R("p1", "M40 40 L52 34 L64 40 L64 54 L52 60 L40 54Z");
+  if (L >= 1) g += I("M40 40 L28 36 M64 40 L74 36 M40 54 L28 60 M64 54 L74 60 M52 34 V26 M52 60 V68");
+  if (L >= 2) g += F("M44 46 h.1 M60 46 h.1 M52 48 h.1 M52 54 h.1 M20 70 h.1 M30 70 h.1 M72 70 h.1 M82 70 h.1") + R("p2", "M28 36 L40 40 L40 54 L28 60 L18 52 L18 42Z") + R("p3", "M76 36 L64 40 L64 54 L76 60 L86 52 L86 42Z");
+  return g;
+};
+DOODLES.flower = ({L, R, RC, RT, I, F, dot}) => {
+  const petal = "M0 0 C-11 -14 -9 -34 0 -38 C9 -34 11 -14 0 0Z";
+  let g = `<path d="M50 52 C46 66 54 80 50 96" fill="none" stroke-width="5"/>` + R("leafL", "M50 80 C36 80 24 70 22 62 C36 62 46 68 50 80Z") + R("leafR", "M50 70 C64 70 76 60 78 52 C64 52 54 58 50 70Z");
+  const n = L === 0 ? 5 : 8;
+  for (let i = 0; i < n; i++) g += RT("p" + i, petal, `translate(50 38) rotate(${i * 360 / n}) scale(${L === 0 ? .85 : .75})`);
+  if (L >= 2) for (let i = 0; i < n; i++) g += RT("q" + i, petal, `translate(50 38) rotate(${(i + .5) * 360 / n}) scale(.42)`);
+  g += RC("c", 50, 38, L === 0 ? 11 : 9);
+  if (L >= 1) g += F("M38 76 L44 74 M62 60 L68 58") + dot(47, 36, 1.4) + dot(53, 36, 1.4) + dot(50, 41, 1.4);
+  return g;
+};
+DOODLES.book = ({L, R, I, F, ring}) => {
+  let g = R("pgL", "M50 30 C36 22 20 22 8 28 V80 C20 74 36 74 50 82Z") + R("pgR", "M50 30 C64 22 80 22 92 28 V80 C80 74 64 74 50 82Z") + I("M50 30 V82");
+  if (L >= 1) g += F("M16 36 C24 34 32 34 42 38 M16 44 C24 42 32 42 42 46 M16 52 C24 50 32 50 42 54 M58 38 C68 34 76 34 84 36 M58 46 C68 42 76 42 84 44") ;
+  else g += R("heart", "M25 44 C14 36 20 28 25 33 C30 28 36 36 25 44Z");
+  if (L >= 1) g += R("ph", "M62 52 H84 V68 H62Z") + I("M68 68 C68 60 78 60 78 68 M73 58 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0");
+  if (L >= 2) g += R("ph2", "M16 58 H36 V70 H16Z") + F("M14 28 H46 M54 28 H86") + R("rib", "M46 78 H54 V94 L50 90 L46 94Z");
+  return g;
+};
+DOODLES.camera = ({L, R, RC, I, F, dot, ring}) => {
+  let g = R("top", "M34 26 H48 L52 32 H34Z") + R("body", "M10 34 H90 Q94 34 94 38 V76 Q94 80 90 80 H10 Q6 80 6 76 V38 Q6 34 10 34Z") + R("band", "M6 44 H94 V52 H6Z");
+  g += RC("lens", 50, 62, 19) + RC("glass", 50, 62, 12) + F("M44 56 Q47 54 50 55") + ring(81, 41, 3.4);
+  g += R("flash", "M72 26 H86 V33 H72Z") + dot(20, 42, 2);
+  if (L >= 1) g += RC("in", 50, 62, 6) + F("M18 70 H28 M74 70 H84");
+  if (L >= 2) g += F("M50 43 V47 M50 77 V81 M31 62 H35 M65 62 H69") + R("btn", "M18 22 H28 V28 H18Z") + F("M10 40 V76 M90 40 V76");
+  return g;
+};
+DOODLES.key = ({L, R, RC, I, F, dot, ring}) => {
+  let g = RC("bow", 24, 50, 18) + ring(24, 50, 8);
+  g += R("shaft", "M42 45 H92 V55 H42Z") + R("tooth1", "M80 55 V70 H90 V55Z") + R("tooth2", "M66 55 V65 H74 V55Z");
+  if (L >= 1) g += R("collar", "M46 42 H52 V58 H46Z") + I("M60 45 V55");
+  if (L >= 2) g += F("M24 32 V36 M24 64 V68 M6 50 H10 M38 50 H42 M11 37 l3 3 M37 37 l-3 3 M11 63 l3 -3 M37 63 l-3 -3") + dot(86, 50, 1.6);
+  return g;
+};
+
+/* ---------- fan chart ---------- */
+function layoutNodes(gens){
+  const out = [];
+  (function rec(list, gen, a1, a2, path){
+    if (gen > gens) return;
+    if (!list.length) {
+      if (gen <= 2) for (let i = 0; i < 2; i++) {
+        const s = a1 + (a2 - a1) / 2 * i;
+        out.push({ghost:true, gen, a1:s, a2:s + (a2 - a1) / 2, key:`ghost:${path}:${i}`});
+      }
+      return;
+    }
+    const step = (a2 - a1) / list.length;
+    list.forEach((id, i) => {
+      const s = a1 + step * i, e = s + step;
+      out.push({key:id, gen, a1:s, a2:e});
+      rec(S.people[id].parents, gen + 1, s, e, path + "/" + id);
+    });
+  })(S.top, 1, Math.PI, 0, "");
+  return out;
+}
+function patternDefs(){
+  const s = lv() === 3 ? .75 : 1, t = `patternUnits="userSpaceOnUse" patternTransform="scale(${s})"`, k = `fill="none" stroke="${INK}"`;
+  return `<pattern id="pt-dots" width="14" height="14" ${t}><circle cx="7" cy="7" r="1.8" fill="${INK}"/></pattern>
+  <pattern id="pt-stripes" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45) scale(${s})"><line x1="0" y1="0" x2="0" y2="9" stroke="${INK}" stroke-width="1.6"/></pattern>
+  <pattern id="pt-waves" width="16" height="10" ${t}><path d="M0 5 Q4 0 8 5 T16 5" ${k} stroke-width="1.4"/></pattern>
+  <pattern id="pt-diamonds" width="14" height="14" ${t}><path d="M7 1 L13 7 L7 13 L1 7Z" ${k} stroke-width="1.3"/></pattern>
+  <pattern id="pt-scales" width="12" height="12" ${t}>${[[0,0],[12,0],[6,6],[0,12],[12,12]].map(([x,y]) => `<circle cx="${x}" cy="${y}" r="6" ${k} stroke-width="1.3"/>`).join("")}</pattern>`;
+}
+function labelFit(txt, ri, ro, ang, maxCap){
+  const rm = (ri + ro) / 2, wd = ro - ri, u = tUnits(txt) / 100;
+  const arcC = Math.min(maxCap, (rm * ang - 14) / u, wd * .5), radC = Math.min(maxCap, (wd - 18) / u, ri * ang - 12);
+  return arcC >= radC * .85 ? {mode:"arc", cap:arcC} : {mode:"rad", cap:radC};
+}
+function effGens(){
+  const deepest = layoutNodes(cfg().gens).reduce((m, n) => n.ghost ? m : Math.max(m, n.gen), 0);
+  return Math.max(2, deepest);
+}
+function fanSVG(cx, cy, R){
+  const gens = effGens(), r0 = 86, w = (R - r0) / gens, sw = lv() === 0 ? 5 : lv() === 1 ? 4 : 3;
+  const pt = (r, a) => [cx + r * Math.cos(a), cy - r * Math.sin(a)];
+  const P = (r, a) => pt(r, a).map(f1).join(" ");
+  const arc = (r, to, sweep, span) => `A ${f1(r)} ${f1(r)} 0 ${span > Math.PI + 1e-6 ? 1 : 0} ${sweep} ${P(r, to)}`;
+  const pats = ["dots","stripes","waves","diamonds","scales"];
+  const traceArc = (txt, rm, mid, cap) => {
+    const sc = cap / 100, total = tUnits(txt) * sc; let off = 0, o = "";
+    tGlyphs(txt).forEach(g => {
+      const adv = g.w * sc, th = mid + (total / 2 - off - adv / 2) / rm, [px, py] = pt(rm - cap / 2, th);
+      o += gEl(g, `translate(${f1(px)} ${f1(py)}) rotate(${f1((Math.PI / 2 - th) * 180 / Math.PI)}) translate(${f1(-adv / 2)} 0)`, cap);
+      off += adv + TGAP * sc;
+    });
+    return o;
+  };
+  const traceRad = (txt, rm, mid, cap) => {
+    const sc = cap / 100, total = tUnits(txt) * sc, d = mid > Math.PI / 2 ? [-Math.cos(mid), Math.sin(mid)] : [Math.cos(mid), -Math.sin(mid)];
+    const up = [d[1], -d[0]], [mx, my] = pt(rm, mid), psi = Math.atan2(d[1], d[0]) * 180 / Math.PI; let off = 0, o = "";
+    tGlyphs(txt).forEach(g => {
+      const s0 = -total / 2 + off, ox = mx + d[0] * s0 - up[0] * cap / 2, oy = my + d[1] * s0 - up[1] * cap / 2;
+      o += gEl(g, `translate(${f1(ox)} ${f1(oy)}) rotate(${f1(psi)})`, cap);
+      off += (g.w + TGAP) * sc;
+    });
+    return o;
+  };
+  let defs = patternDefs(), base = "", over = "", ribbons = "", texts = "";
+  layoutNodes(gens).forEach((n, i) => {
+    const ri = r0 + (n.gen - 1) * w, ro = ri + w, span = n.a1 - n.a2, mid = (n.a1 + n.a2) / 2;
+    const d = `M ${P(ro, n.a1)} ${arc(ro, n.a2, 1, span)} L ${P(ri, n.a2)} ${arc(ri, n.a1, 0, span)} Z`;
+    if (n.ghost) base += `<path d="${d}" fill="#fff" stroke="#9aa3b5" stroke-width="2" stroke-dasharray="8 6"/>`;
+    else base += `<path d="${d}" ${C("fan." + n.key)} stroke="${INK}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+    if (lv() >= 1 && !n.ghost) over += `<path d="${d}" fill="url(#pt-${lv() === 1 ? "dots" : pats[(n.gen + i) % 5]})" pointer-events="none"/>`;
+    const maxCap = cfg().maxFont * 1.3;
+    let t = n.ghost ? "?" : nm(S.people[n.key]), f = labelFit(t, ri, ro, span, maxCap);
+    if (f.cap < 12 && t.includes(" ")) { t = t.split(" ")[0]; f = labelFit(t, ri, ro, span, maxCap); }
+    const cap = Math.max(f.cap, 7), rm = (ri + ro) / 2;
+    let path;
+    if (f.mode === "arc") {
+      const pad = 5 / rm, s1 = n.a1 - pad, s2 = n.a2 + pad;
+      path = `M ${P(rm, s1)} A ${f1(rm)} ${f1(rm)} 0 ${(s1 - s2) > Math.PI + 1e-6 ? 1 : 0} 1 ${P(rm, s2)}`;
+    } else {
+      path = mid > Math.PI / 2 ? `M ${P(ro - 7, mid)} L ${P(ri + 7, mid)}` : `M ${P(ri + 7, mid)} L ${P(ro - 7, mid)}`;
+    }
+    if (lv() >= 1 && !n.ghost) {
+      const rw = f.mode === "arc" ? cap * 1.7 : Math.min(cap * 1.7, ri * span - 6);
+      ribbons += `<path d="${path}" fill="none" stroke="#fff" stroke-width="${f1(rw)}" pointer-events="none"/>`;
+    }
+    const els = f.mode === "arc" ? traceArc(t, rm, mid, cap) : traceRad(t, rm, mid, cap);
+    texts += n.ghost ? `<g opacity=".55">${els}</g>` : els;
+  });
+  const half = `M ${f1(cx - r0)} ${cy} A ${r0} ${r0} 0 0 1 ${f1(cx + r0)} ${cy} Z`;
+  let name = cname(), ns = fitT(name, 2 * r0 - 30, cfg().maxFont + 14);
+  if (ns < 14 && name.includes(" ")) { name = name.split(" ")[0]; ns = fitT(name, 2 * r0 - 30, cfg().maxFont + 14); }
+  const center = `<path d="${half}" ${C("fan.me")} stroke="${INK}" stroke-width="${sw}" stroke-linejoin="round"/>` + dtext(name, cx, cy - r0 * .4, ns);
+  return `<defs>${defs}</defs>${base}${over}${ribbons}${texts}${center}<line x1="${cx - R - 8}" y1="${cy}" x2="${cx + R + 8}" y2="${cy}" stroke="${INK}" stroke-width="${sw}" stroke-linecap="round"/>`;
+}
+
+/* ---------- pages ---------- */
+function pCover(){
+  const types = ["house","cat","plane","globe"];
+  let o = doodle("star", 70, 55, 100, "cv.s1") + doodle("star", 680, 55, 100, "cv.s2") + doodle("sun", 345, 40, 160, "cv.sun");
+  o += dtext(poss(), 425, 300, fitT(poss(), 740, 120), "middle");
+  o += dtext("Family", 425, 440, 150) + dtext("Adventure", 425, 585, fitT("Adventure", 740, 135));
+  o += stext("A coloring & discovery workbook", 425, 690, 30) + stext(cfg().label, 425, 735, 20, "middle", "#6b7488");
+  types.forEach((t, i) => o += doodle(t, 65 + i * 190, 800, 150, "cv." + t));
+  return page(o);
+}
+function pName(){
+  let o = stext("Trace your name!", 425, 115, 44);
+  const name = cname(), nsz = fitT(name, 730, 150);
+  o += guides(55, 795, 320, nsz * .72) + dtext(name, 425, 320 - nsz * .36, nsz);
+  o += stext("Now write it yourself:", 80, 410, 24, "start", "#6b7488");
+  [490, 565].forEach(y => {
+    o += `<line x1="70" y1="${y - 50}" x2="780" y2="${y - 50}" stroke="#c9d0de" stroke-width="2"/><line x1="70" y1="${y - 25}" x2="780" y2="${y - 25}" stroke="#c9d0de" stroke-width="2" stroke-dasharray="8 8"/><line x1="70" y1="${y}" x2="780" y2="${y}" stroke="${INK}" stroke-width="3"/>`;
+  });
+  o += `<ellipse cx="425" cy="825" rx="170" ry="190" fill="none" stroke="#9aa3b5" stroke-width="4" stroke-dasharray="12 10"/>` + stext("Draw yourself here!", 425, 825, 26, "middle", "#9aa3b5");
+  o += doodle("butterfly", 70, 630, 130, "nm.b") + doodle("bird", 650, 630, 130, "nm.bd") + doodle("flower", 75, 870, 115, "nm.f") + doodle("dog", 660, 860, 120, "nm.d");
+  return page(o);
+}
+function pAlphabet(){
+  if (lv() > 1) return "";
+  const cap = 62, rows = [["Aa","Bb","Cc","Dd","Ee"], ["Ff","Gg","Hh","Ii","Jj","Kk"], ["Ll","Mm","Nn","Oo","Pp"], ["Qq","Rr","Ss","Tt","Uu"], ["Vv","Ww","Xx","Yy","Zz"], [..."0123456789"]];
+  let o = dtext("Trace the Alphabet", 425, 100, 64) + stext("Follow the dashes from the top, then write your own!", 425, 160, 24);
+  rows.forEach((row, r) => {
+    const base = 270 + r * 140, wid = it => tUnits(it) * cap / 100, total = row.reduce((a, it) => a + wid(it), 0);
+    const gap = (720 - total) / (row.length - 1) , gx = 65 + 0;
+    o += guides(55, 795, base, cap);
+    let x = 65 + (row.length === 10 ? 0 : 0);
+    row.forEach(it => { o += traceText(it, x, base, cap, "start"); x += wid(it) + Math.min(gap, 70); });
+  });
+  return page(o);
+}
+function pFan(){
+  const g = effGens(), T = poss() + " Family Fan";
+  let o = dtext(T, 550, 100, fitT(T, 900, 66)) + stext("Color every wedge. Trace every name!", 550, 152, 24);
+  for (let i = 1; i <= g; i++) o += stext(`Ring ${i}:  ${GEN_RING[i - 1]}`, 78, 200 + (i - 1) * 27, 19, "start");
+  o += doodle("compass", 880, 150, 130, "fan.cmp") + doodle("butterfly", 90, 340, 120, "fan.bf") + doodle("flower", 930, 620, 100, "fan.fl");
+  o += fanSVG(550, 800, 505);
+  return page(o, true);
+}
+function pPeople(){
+  const nodes = layoutNodes(cfg().gens).filter(n => !n.ghost).sort((a, b) => a.gen - b.gen);
+  const per = cfg().perPage, rows = per / 2, out = [];
+  const icons = ["flower","bird","butterfly","cat","dog","fish","turtle","key"];
+  for (let pg = 0; pg * per < nodes.length || pg === 0; pg++) {
+    let o = dtext(pg ? "Meet My Family, part " + (pg + 1) : "Meet My Family", 425, 100, 64) + stext("Draw each person, then trace their name!", 425, 160, 24);
+    const big = lv() >= 2, gx = big ? 80 : 55, cw = big ? 340 : 360, ch = ((big ? 820 : 870) - (rows - 1) * 20) / rows;
+    nodes.slice(pg * per, pg * per + per).forEach((n, k) => {
+      const p = S.people[n.key], x = gx + (k % 2) * (cw + 20), y = 190 + Math.floor(k / 2) * (ch + 20);
+      const name = nm(p), ns = fitT(name, cw - 30, lv() === 0 ? 64 : 56);
+      o += `<rect x="${x}" y="${y}" width="${cw}" height="${f1(ch)}" rx="22" fill="none" stroke="${INK}" stroke-width="${lv() ? 3 : 4}"/>`;
+      o += dtext(name, x + cw / 2, y + 44, ns) + stext(roleOf(p, n.gen), x + cw / 2, y + 86, 20, "middle", "#6b7488");
+      const ry = Math.min(105, (ch - 165) / 2), cy = y + 100 + (ch - 100 - 52) / 2;
+      o += `<ellipse cx="${x + cw / 2}" cy="${f1(cy)}" rx="${f1(ry * .85)}" ry="${f1(ry)}" fill="none" stroke="#9aa3b5" stroke-width="3" stroke-dasharray="10 8"/>`;
+      const meta = [p.year.trim() && "Born " + p.year.trim(), p.place.trim()].filter(Boolean).join(" · ");
+      if (meta) o += stext(meta.length > 31 ? meta.slice(0, 30) + "…" : meta, x + 22, y + ch - 30, 15, "start");
+      o += doodle(icons[(k + pg * per) % 8], x + cw - 84, y + ch - 82, 68, `pp.${n.key}`);
+    });
+    out.push(page(o));
+  }
+  return out.join("");
+}
+function stations(){
+  const max = cfg().stations;
+  const nodes = layoutNodes(cfg().gens).filter(n => !n.ghost && S.people[n.key].place.trim()).sort((a, b) => b.gen - a.gen);
+  const map = new Map();
+  nodes.forEach(n => {
+    const p = S.people[n.key], k = p.place.trim().toLowerCase();
+    if (!map.has(k)) map.set(k, {place:p.place.trim(), who:[]});
+    map.get(k).who.push(p.name.trim() || roleOf(p, n.gen));
+  });
+  const home = S.child.place.trim();
+  if (home) map.delete(home.toLowerCase());
+  let list = [...map.values()].slice(-(home ? max - 1 : max)).map(s => ({place:s.place, who:s.who.slice(0, 2).join(" & ") + (s.who.length > 2 ? " + " + (s.who.length - 2) + " more" : "")}));
+  if (home) list.push({place:home, who:cname() + " (home)"});
+  return list.length ? list : Array.from({length:4}, () => ({place:"", who:""}));
+}
+function pJourney(){
+  const list = stations(), n = list.length, types = ["boat","plane","suitcase","compass","globe","camera","book","key"];
+  let o = dtext(poss() + " Family Journey", 425, 100, fitT(poss() + " Family Journey", 740, 70));
+  o += stext("Follow the dotted path from long ago to today!", 425, 165, 26);
+  const y0 = 290, y1 = 960, step = n > 1 ? (y1 - y0) / (n - 1) : 0;
+  const pos = list.map((_, i) => [i % 2 ? 250 : 110, n > 1 ? y0 + i * step : 620]);
+  let d = `M ${pos[0][0]} ${pos[0][1]}`;
+  for (let i = 1; i < n; i++) { const ym = (pos[i-1][1] + pos[i][1]) / 2; d += ` C ${pos[i-1][0]} ${ym} ${pos[i][0]} ${ym} ${pos[i][0]} ${pos[i][1]}`; }
+  o += `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${lv() ? 5 : 7}" stroke-dasharray="${lv() ? "16 14" : "20 16"}" stroke-linecap="round"/>`;
+  list.forEach((s, i) => {
+    const [x, y] = pos[i], last = i === n - 1;
+    o += `<circle cx="${x}" cy="${y}" r="34" ${C("jr." + i)} stroke="${INK}" stroke-width="4"/>` + stext(String(i + 1), x, y, 30, "middle", INK, 'font-weight="bold" pointer-events="none"');
+    if (s.place) {
+      o += dtext(s.place, 330, y - 12, fitT(s.place, 340, lv() === 0 ? 48 : 42), "start") + stext(s.who, 330, y + 26, 19, "start", "#6b7488");
+    } else {
+      o += `<line x1="330" y1="${y + 6}" x2="670" y2="${y + 6}" stroke="${INK}" stroke-width="3"/>` + stext("Write a place here", 330, y - 16, 18, "start", "#9aa3b5");
+    }
+    o += doodle(last && s.place ? "house" : types[i % types.length], 700, y - 42, 84, "jr.d" + i);
+  });
+  o += stext("Find each place on a map or globe!", 425, 1020, 20, "middle", "#6b7488");
+  return page(o);
+}
+const QUESTIONS = [
+  "What is your favorite family story?", "What games did you play as a kid?", "What was your favorite food growing up?", "Where did you grow up?",
+  "What was school like for you?", "Which family tradition matters most to you?",
+  "Where did our family name come from?", "What advice would you give me?"
+];
+function pDetective(){
+  if (lv() === 0) return "";
+  const n = lv() === 1 ? 4 : lv() === 2 ? 6 : 8, qs = lv() === 3 ? QUESTIONS.slice(0, 7).concat(["Which family keepsake matters most, and why?"]) : QUESTIONS.slice(0, n);
+  let o = dtext("Family Detective Notes", 425, 100, 66) + stext("I interviewed: ______________________   Date: ____________", 425, 165, 22);
+  const h = 800 / n;
+  qs.forEach((q, i) => {
+    const y = 215 + i * h;
+    o += stext(`${i + 1}. ${q}`, 80, y + 14, fit(q, 640, 24, .55) , "start", INK, 'font-weight="bold"');
+    const lines = h > 150 ? 2 : 1;
+    for (let k = 1; k <= lines; k++) o += `<line x1="80" y1="${f1(y + 20 + k * (h - 40) / (lines + .3))}" x2="770" y2="${f1(y + 20 + k * (h - 40) / (lines + .3))}" stroke="#9aa3b5" stroke-width="2"/>`;
+  });
+  return page(o);
+}
+function pTimeline(){
+  if (lv() < 2) return "";
+  const rows = layoutNodes(cfg().gens).filter(n => !n.ghost && /^\d{3,4}$/.test(S.people[n.key].year.trim()))
+    .map(n => ({p:S.people[n.key], gen:n.gen})).sort((a, b) => +a.p.year - +b.p.year).slice(0, 9);
+  let o = dtext("Family Timeline", 425, 100, 72) + stext(rows.length ? "Who was born when? Color the dots in order." : "Fill in the years as you discover them.", 425, 165, 24);
+  const cnt = rows.length || 6, step = Math.min(110, 780 / cnt);
+  o += `<line x1="230" y1="220" x2="230" y2="${220 + step * cnt}" stroke="${INK}" stroke-width="5" stroke-dasharray="14 12" stroke-linecap="round"/>`;
+  for (let i = 0; i < cnt; i++) {
+    const y = 250 + i * step, r = rows[i];
+    o += `<circle cx="230" cy="${y}" r="20" ${C("tl." + i)} stroke="${INK}" stroke-width="3"/>`;
+    if (r) {
+      o += stext(r.p.year.trim(), 190, y, 30, "end", INK, 'font-weight="bold"') + dtext(nm(r.p), 275, y - 8, fitT(nm(r.p), 500, 40), "start") + stext(roleOf(r.p, r.gen) + (r.p.place.trim() ? " · " + r.p.place.trim() : ""), 275, y + 24, 18, "start", "#6b7488");
+    } else {
+      o += stext("Year: ______", 190, y, 24, "end") + `<line x1="275" y1="${y + 8}" x2="760" y2="${y + 8}" stroke="${INK}" stroke-width="2"/>` + stext("Who?", 275, y - 14, 16, "start", "#9aa3b5");
+    }
+  }
+  return page(o);
+}
+function pCert(){
+  let o = stext("This certifies that", 425, 200, 32, "middle", "#6b7488");
+  o += dtext(cname(), 425, 320, fitT(cname(), 740, 130));
+  o += stext("is an official", 425, 440, 32, "middle", "#6b7488");
+  o += dtext("Family History", 425, 540, 100) + dtext("Explorer!", 425, 660, 120);
+  o += doodle("star", 70, 740, 190, "ct.s1") + doodle("star", 590, 740, 190, "ct.s2") + doodle("heart", 330, 760, 190, "ct.h");
+  o += stext("Date: ________________", 425, 1000, 24);
+  return page(o);
+}
+function renderPages(){
+  $("#pages").innerHTML = [pCover(), pName(), pAlphabet(), pFan(), pPeople(), pJourney(), pDetective(), pTimeline(), pCert()].join("");
+}
+
+/* ---------- start ---------- */
+if (!load()) { example(); save(); }
+renderPalette();
+renderAll();
+</script>
+</body>
+</html>
