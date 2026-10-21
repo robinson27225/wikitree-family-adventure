@@ -703,6 +703,11 @@ function pName(){
   const name = cname(), nsz = fitT(name, 730, 150);
   o += young ? guides(55, 795, 320, nsz * .72) + dtext(name, 425, 320 - nsz * .36, nsz) : dtext(name, 425, 260, nsz);
   if (young) o += stext("Now write it yourself:", 80, 410, 24, "start", "#6b7488");
+  if (!young) {
+    [["I was born in", 400], ["I live in", 455], ["I was named after", 510], ["My family comes from", 565]].forEach(([lab, y]) => {
+      o += stext(lab + ":", 80, y, 22, "start") + wl(380, 770, y + 8);
+    });
+  }
   (young ? [490, 565] : []).forEach(y => {
     o += `<line x1="70" y1="${y - 50}" x2="780" y2="${y - 50}" stroke="#c9d0de" stroke-width="2"/><line x1="70" y1="${y - 25}" x2="780" y2="${y - 25}" stroke="#c9d0de" stroke-width="2" stroke-dasharray="8 8"/><line x1="70" y1="${y}" x2="780" y2="${y}" stroke="${INK}" stroke-width="3"/>`;
   });
@@ -797,6 +802,7 @@ const QUESTIONS = [
 ];
 function pDetective(){
   if (lv() === 0) return "";
+  if (lv() === 3) return pInterview();
   const n = lv() === 1 ? 4 : lv() === 2 ? 6 : 8, qs = lv() === 3 ? QUESTIONS.slice(0, 7).concat(["Which family keepsake matters most, and why?"]) : QUESTIONS.slice(0, n);
   let o = dtext("Family Detective Notes", 425, 100, 66) + stext("I interviewed: ______________________   Date: ____________", 425, 165, 22);
   const h = 800 / n;
@@ -826,7 +832,70 @@ function pTimeline(){
   }
   return page(o);
 }
+/* ---------- research pages for ages 13+ ---------- */
+const wl = (x1, x2, y) => `<line x1="${x1}" y1="${f1(y)}" x2="${x2}" y2="${f1(y)}" stroke="#9aa3b5" stroke-width="2"/>`;
+const wls = (x1, x2, y, n, gap) => Array.from({length:n}, (_, i) => wl(x1, x2, y + i * gap)).join("");
+const sub = (t, y = 152) => stext(t, 425, y, 20, "middle", "#6b7488");
+const lab = (t, x, y) => stext(t, x, y, 17, "start", "#4a5470", 'font-weight="bold"');
+function pPlaces(){
+  if (lv() < 3) return "";
+  let list = stations().filter(x => x.place);
+  if (!list.length) list = [{place:"", who:""}, {place:"", who:""}, {place:"", who:""}];
+  const out = [];
+  for (let pg = 0; pg * 3 < list.length; pg++) {
+    let o = dtext(pg ? "Place Research, part " + (pg + 1) : "Place Research", 425, 100, 60) + sub("What did you find out about the places your family came from?");
+    list.slice(pg * 3, pg * 3 + 3).forEach((x, k) => {
+      const y = 185 + k * 270;
+      o += `<rect x="80" y="${y}" width="690" height="262" rx="14" fill="none" stroke="${INK}" stroke-width="2.5"/>`;
+      o += x.place ? dtext(x.place, 100, y + 34, fitT(x.place, 560, 32), "start") + stext(x.who, 100, y + 62, 17, "start", "#6b7488")
+                   : stext("Place:", 100, y + 34, 24, "start") + wl(185, 750, y + 40);
+      o += lab("When did they live there, and why did they come or leave?", 100, y + 92) + wl(100, 750, y + 114);
+      o += lab("What I found out (history, events, records, maps):", 100, y + 138) + wls(100, 750, y + 160, 2, 24);
+      o += lab("Where I found it (source, website, archive):", 100, y + 206) + wl(100, 750, y + 230);
+    });
+    out.push(page(o));
+  }
+  return out.join("");
+}
+function pInterview(){
+  const qs = ["What is your earliest family memory?", "Where did our family come from, and why did they move?", "What work did people in our family do?",
+    "What traditions, foods or sayings came from earlier generations?", "What hard time did our family go through, and how did you get through it?", "Is there a family story you aren't sure is true?"];
+  let o = dtext("Interview Log", 425, 100, 60) + sub("Record who you talked to, what they said, and what you still want to know.");
+  o += lab("Who I interviewed:", 80, 205) + wl(235, 440, 212) + lab("Relationship to me:", 470, 205) + wl(640, 770, 212);
+  o += lab("Date:", 80, 250) + wl(125, 270, 257) + lab("How:  in person / phone / video / letter", 300, 250) + wl(640, 770, 257);
+  o += lab("OK to record or share what they tell me?   Yes   /   No", 80, 295);
+  qs.forEach((q, i) => {
+    const y = 345 + i * 108;
+    o += stext(`${i + 1}. ${q}`, 80, y, 20, "start", INK, 'font-weight="bold"') + wls(80, 770, y + 36, 2, 30);
+  });
+  const p1 = page(o);
+  let o2 = dtext("Interview Log, continued", 425, 100, 56) + sub("The details that bring the story to life.");
+  [["Stories and quotes I want to remember", 190, 6], ["People, places and dates they mentioned", 440, 4], ["Photos, documents or keepsakes to look for", 640, 3], ["Follow-up questions for next time", 800, 4]].forEach(([t, y, n]) => {
+    o2 += lab(t, 80, y) + wls(80, 770, y + 34, n, 36);
+  });
+  return p1 + page(o2);
+}
+function pResearchLog(){
+  if (lv() < 3) return "";
+  let o = dtext("Research Log", 425, 100, 60) + sub("Keep track of what you looked for, where you looked, and what to try next.");
+  const cols = [80, 300, 520, 770], top = 200, rh = 86, rows = 9;
+  o += `<rect x="80" y="${top}" width="690" height="${rh * rows + 40}" rx="8" fill="none" stroke="${INK}" stroke-width="2.5"/>`;
+  ["Question", "Where I looked", "What I found / next step"].forEach((t, i) => o += stext(t, cols[i] + 12, top + 22, 18, "start", INK, 'font-weight="bold"'));
+  o += `<line x1="80" y1="${top + 40}" x2="770" y2="${top + 40}" stroke="${INK}" stroke-width="2"/>`;
+  for (let r = 1; r < rows; r++) o += `<line x1="80" y1="${top + 40 + r * rh}" x2="770" y2="${top + 40 + r * rh}" stroke="#9aa3b5" stroke-width="1.5"/>`;
+  [300, 520].forEach(x => o += `<line x1="${x}" y1="${top}" x2="${x}" y2="${top + rh * rows + 40}" stroke="${INK}" stroke-width="2"/>`);
+  return page(o);
+}
+function pStory(){
+  let o = dtext("What I Learned", 425, 100, 64) + sub("Look back over your research and put it in your own words.");
+  [["The most surprising thing I found out", 195], ["A person I want to know more about, and why", 380], ["A pattern I noticed (places, jobs, names, traditions)", 565], ["What I want to research next", 750]].forEach(([t, y]) => {
+    o += stext(t, 80, y, 22, "start", INK, 'font-weight="bold"') + wls(80, 770, y + 44, 3, 44);
+  });
+  o += stext("Researcher: " + cname(), 80, 975, 20, "start", "#4a5470") + stext("Date: ______________", 770, 975, 20, "end", "#4a5470");
+  return page(o);
+}
 function pCert(){
+  if (lv() === 3) return pStory();
   let o = stext("This certifies that", 425, 200, 32, "middle", "#6b7488");
   o += dtext(cname(), 425, 320, fitT(cname(), 740, 130));
   o += stext("is an official", 425, 440, 32, "middle", "#6b7488");
@@ -836,7 +905,7 @@ function pCert(){
   return page(o);
 }
 function renderPages(){
-  $("#pages").innerHTML = [pCover(), pName(), pAlphabet(), pFan(), pPeople(), pJourney(), pDetective(), pTimeline(), pCert()].join("");
+  $("#pages").innerHTML = [pCover(), pName(), pAlphabet(), pFan(), pPeople(), pJourney(), pPlaces(), pDetective(), pTimeline(), pResearchLog(), pCert()].join("");
 }
 
 /* ---------- start ---------- */
