@@ -186,10 +186,10 @@ $("#tree").addEventListener("input", e => {
   const f = e.target.dataset.f, id = e.target.closest(".person")?.dataset.id;
   if (f && id && S.people[id]) { S.people[id][f] = e.target.value; later(); }
 });
-$("#tree").addEventListener("click", e => {
+$("#tree").addEventListener("click", async e => {
   const act = e.target.dataset.act, id = e.target.closest(".person")?.dataset.id;
   if (!act || !id) return;
-  if (act === "add") addPerson(id);
+  if (act === "add") { const p = S.people[id]; if (!(p.wt && !p.parents.length && await wtAddParents(id))) addPerson(id); }
   if (act === "del") removePerson(id);
   renderTree(); renderPages(); save();
 });
@@ -200,46 +200,68 @@ $("#age").onchange = e => { S.level = +e.target.value; renderControls(); renderT
 $("#wtId").oninput = e => { S.child.wt = e.target.value; save(); };
 $("#wtMode").onchange = e => { S.wtMode = e.target.value; save(); };
 const wtFirst = p => (p.RealName || p.FirstName || "").trim().split(/\s+/)[0] || "Private";
-const wtPlace = loc => { const a = String(loc || "").split(",").map(x => x.trim()).filter(Boolean); return a.length > 2 ? a[0] + ", " + a[a.length - 1] : a.join(", "); };
+const wtPlace = loc => { const a = String(loc || "").split(",").map(x => x.trim()).filter(Boolean); return a.length > 3 ? a[0] + ", " + a[a.length - 2] + ", " + a[a.length - 1] : a.join(", "); };
 const wtYear = d => { const y = String(d || "").slice(0, 4); return /^[1-9]\d{3}$/.test(y) ? y : ""; };
-async function importWT(){
-  const msg = t => { $("#wtMsg").textContent = t; };
-  const id = $("#wtId").value.trim().replace(/^.*wikitree\.com\/wiki\//i, "").replace(/\s+/g, "");
-  if (!id) return msg("Type a WikiTree ID first, like Windsor-1.");
-  if (S.top.length && !confirm("Replace the family you've entered with the one from WikiTree?")) return;
-  const mode = $("#wtMode").value, depth = Math.max(1, cfg().gens - (mode === "parent" ? 1 : 0));
-  const url = "https://api.wikitree.com/api.php?action=getAncestors&key=" + encodeURIComponent(id) + "&depth=" + depth
-    + "&appId=WikiTreeFamilyAdventure&fields=Id,Name,FirstName,RealName,BirthDate,BirthLocation,Father,Mother,IsLiving";
-  msg("Asking WikiTree…");
-  let list;
-  let st = "";
+const WT_FIELDS = "Id,Name,FirstName,RealName,BirthDate,BirthLocation,Father,Mother,IsLiving";
+const wtMsg = t => { $("#wtMsg").textContent = t; };
+/* Ask WikiTree for a person and their ancestors. Retries when WikiTree says it is busy. */
+async function wtFetch(key, depth){
+  const url = "https://api.wikitree.com/api.php?action=getPeople&keys=" + encodeURIComponent(key) + "&ancestors=" + depth
+    + "&appId=WikiTreeFamilyAdventure&fields=" + WT_FIELDS;
+  let res = {};
   for (let attempt = 0; attempt < 4; attempt++) {
-    try { const r = await fetch(url, {credentials:"include"}), j = (await r.json())[0] || {}; list = j.ancestors || []; st = j.status || ""; }
-    catch (e) { return msg("Couldn't reach WikiTree. Importing works when this app is opened from apps.wikitree.com. You can still type the family in by hand."); }
-    if (list.length || !/limit/i.test(st)) break;
-    const wait = [5, 12, 25][attempt];
+    try { const r = await fetch(url, {credentials:"include"}); res = (await r.json())[0] || {}; }
+    catch (e) { return {error:"Couldn't reach WikiTree. Importing works when this app is opened from apps.wikitree.com. You can still type the family in by hand."}; }
+    const people = Object.values(res.people || {});
+    if (people.length || !/limit/i.test(res.status || "")) {
+      const byId = new Map(people.map(p => [p.Id, p])), rid = Object.values(res.resultByKey || {})[0]?.Id;
+      return {byId, root:byId.get(rid) || people.find(p => String(p.Name).toLowerCase() === String(key).toLowerCase()), status:res.status || ""};
+    }
     if (attempt === 3) break;
-    for (let t = wait; t > 0; t--) { msg("WikiTree is busy. Trying again in " + t + " seconds…"); await new Promise(r => setTimeout(r, 1000)); }
-    msg("Asking WikiTree again…");
+    for (let t = [5, 12, 25][attempt]; t > 0; t--) { wtMsg("WikiTree is busy. Trying again in " + t + " seconds…"); await new Promise(r => setTimeout(r, 1000)); }
+    wtMsg("Asking WikiTree again…");
   }
-  const byId = new Map(list.map(p => [p.Id, p])), root = list.find(p => String(p.Name).toLowerCase() === id.toLowerCase() || String(p.Id) === id);
-  if (!list.length && /limit/i.test(st)) return msg("WikiTree is still limiting requests. Wait a couple of minutes, then press Import again.");
-  if (!root) return msg("WikiTree didn't return a public profile for “" + id + "”. Check the ID, or the profile may be private.");
-  const make = p => {
-    const pid = "p" + S.next++;
-    S.people[pid] = {id:pid, name:wtFirst(p), role:"", place:wtPlace(p.BirthLocation), year:wtYear(p.BirthDate), wt:p.Name, living:!!p.IsLiving, parents:[]};
-    [p.Father, p.Mother].forEach(x => { if (x && byId.has(x)) S.people[pid].parents.push(make(byId.get(x))); });
-    return pid;
-  };
+  return {error:"WikiTree is still limiting requests. Wait a couple of minutes, then try again."};
+}
+function wtBuild(byId, p){
+  const pid = "p" + S.next++;
+  S.people[pid] = {id:pid, name:wtFirst(p), role:"", place:wtPlace(p.BirthLocation), year:wtYear(p.BirthDate), wt:p.Name, living:!!p.IsLiving, parents:[]};
+  [p.Father, p.Mother].forEach(x => { if (x && byId.has(x)) S.people[pid].parents.push(wtBuild(byId, byId.get(x))); });
+  return pid;
+}
+/* Fetch the parents (and their ancestors) of someone already in the tree who has a WikiTree ID. */
+async function wtAddParents(id){
+  const p = S.people[id];
+  wtMsg("Looking up " + (p.name || p.wt) + "'s parents on WikiTree…");
+  const r = await wtFetch(p.wt, 4);
+  if (r.error) { wtMsg(r.error); return 0; }
+  if (!r.root) { wtMsg("WikiTree didn't return a public profile for " + p.wt + "."); return 0; }
+  const before = p.parents.length;
+  [r.root.Father, r.root.Mother].forEach(x => { if (x && r.byId.has(x)) p.parents.push(wtBuild(r.byId, r.byId.get(x))); });
+  const added = p.parents.length - before;
+  wtMsg(added ? "Added " + added + " parent" + (added > 1 ? "s" : "") + " from WikiTree." : "WikiTree doesn't list public parents for " + (p.name || p.wt) + ". Added a blank card to fill in.");
+  return added;
+}
+async function importWT(){
+  const id = $("#wtId").value.trim().replace(/^.*wikitree\.com\/wiki\//i, "").replace(/\s+/g, "");
+  if (!id) return wtMsg("Type a WikiTree ID first, like Windsor-1.");
+  if (S.top.length && !confirm("Replace the family you've entered with the one from WikiTree?")) return;
+  const mode = $("#wtMode").value;
+  wtMsg("Asking WikiTree…");
+  const r = await wtFetch(id, mode === "parent" ? 4 : 5);
+  if (r.error) return wtMsg(r.error);
+  if (!r.root) return wtMsg("WikiTree didn't return a public profile for “" + id + "”. Check the ID, or the profile may be private.");
+  const root = r.root;
   S.people = {}; S.top = []; S.colors = {};
   if (mode === "child") {
     if (!S.child.name.trim()) S.child.name = wtFirst(root);
     if (!S.child.place.trim()) S.child.place = wtPlace(root.BirthLocation);
-    [root.Father, root.Mother].forEach(x => { if (x && byId.has(x)) S.top.push(make(byId.get(x))); });
-  } else S.top.push(make(root));
+    [root.Father, root.Mother].forEach(x => { if (x && r.byId.has(x)) S.top.push(wtBuild(r.byId, r.byId.get(x))); });
+  } else S.top.push(wtBuild(r.byId, root));
   S.child.wt = id; S.wtMode = mode;
   renderAll(); save();
-  msg(S.top.length ? "Imported " + Object.keys(S.people).length + " people from WikiTree. Add any other parents or guardians by hand." : "That profile has no public parents on WikiTree. Add the family by hand.");
+  const living = Object.values(S.people).filter(x => x.living).length;
+  wtMsg(S.top.length ? "Imported " + Object.keys(S.people).length + " people from WikiTree." + (living ? " " + living + " living: add their places by hand, since WikiTree hides them." : "") + " Add any other parents or guardians by hand." : "That profile has no public parents on WikiTree. Add the family by hand.");
 }
 $("#wtImport").onclick = importWT;
 $("#print").onclick = () => window.print();
