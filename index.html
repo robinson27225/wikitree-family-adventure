@@ -160,9 +160,9 @@ function nodeHTML(id, gen){
   const p = S.people[id], beyond = gen > LEVELS[S.level].gens;
   return `<div class="person ${beyond?"beyond":""}" data-id="${id}">
     ${beyond ? `<p class="tag">Not shown for this age range</p>` : ""}
-    ${p.wt ? `<p class="tag"><a href="https://www.wikitree.com/wiki/${encodeURIComponent(p.wt)}" target="_blank" rel="noopener">${esc(p.wt)}</a> on WikiTree</p>` : ""}
+    ${p.wt ? `<p class="tag"><a href="https://www.wikitree.com/wiki/${encodeURIComponent(p.wt)}" target="_blank" rel="noopener">${esc(p.wt)}</a> on WikiTree${p.living ? ". Living, so WikiTree hides birthplace and dates. Add them here if you know them." : ""}</p>` : ""}
     <div class="prow"><input data-f="name" placeholder="Name" value="${esc(p.name)}" aria-label="Name"><input data-f="role" list="roles" placeholder="${esc(GEN_ROLE[Math.min(gen-1,4)])}" value="${esc(p.role)}" aria-label="Role"></div>
-    <div class="prow"><input data-f="place" placeholder="Place of origin" value="${esc(p.place)}" aria-label="Place"><input data-f="year" placeholder="Born (year)" inputmode="numeric" value="${esc(p.year)}" aria-label="Year born"></div>
+    <div class="prow"><input data-f="place" placeholder="${p.living && !p.place ? "Place (hidden for living)" : "Place of origin"}" value="${esc(p.place)}" aria-label="Place"><input data-f="year" placeholder="Born (year)" inputmode="numeric" value="${esc(p.year)}" aria-label="Year born"></div>
     <div class="kids">${p.parents.map(c => nodeHTML(c, gen+1)).join("")}</div>
     <div class="pbtns"><button class="mini" data-act="add">+ Add their parent</button><button class="mini danger" data-act="del">Remove</button></div>
   </div>`;
@@ -227,7 +227,7 @@ async function importWT(){
   if (!root) return msg("WikiTree didn't return a public profile for “" + id + "”. Check the ID, or the profile may be private.");
   const make = p => {
     const pid = "p" + S.next++;
-    S.people[pid] = {id:pid, name:wtFirst(p), role:"", place:wtPlace(p.BirthLocation), year:wtYear(p.BirthDate), wt:p.Name, parents:[]};
+    S.people[pid] = {id:pid, name:wtFirst(p), role:"", place:wtPlace(p.BirthLocation), year:wtYear(p.BirthDate), wt:p.Name, living:!!p.IsLiving, parents:[]};
     [p.Father, p.Mother].forEach(x => { if (x && byId.has(x)) S.people[pid].parents.push(make(byId.get(x))); });
     return pid;
   };
@@ -839,7 +839,9 @@ const sub = (t, y = 152) => stext(t, 425, y, 20, "middle", "#6b7488");
 const lab = (t, x, y) => stext(t, x, y, 17, "start", "#4a5470", 'font-weight="bold"');
 function pPlaces(){
   if (lv() < 3) return "";
-  let list = stations().filter(x => x.place);
+  const unlisted = layoutNodes(cfg().gens).filter(n => !n.ghost && !S.people[n.key].place.trim())
+    .map(n => ({place:"", who:(S.people[n.key].name.trim() || roleOf(S.people[n.key], n.gen)) + " (place not listed: ask them!)"}));
+  let list = stations().filter(x => x.place).concat(unlisted);
   if (!list.length) list = [{place:"", who:""}, {place:"", who:""}, {place:"", who:""}];
   const out = [];
   for (let pg = 0; pg * 3 < list.length; pg++) {
@@ -848,7 +850,7 @@ function pPlaces(){
       const y = 185 + k * 270;
       o += `<rect x="80" y="${y}" width="690" height="262" rx="14" fill="none" stroke="${INK}" stroke-width="2.5"/>`;
       o += x.place ? dtext(x.place, 100, y + 34, fitT(x.place, 560, 32), "start") + stext(x.who, 100, y + 62, 17, "start", "#6b7488")
-                   : stext("Place:", 100, y + 34, 24, "start") + wl(185, 750, y + 40);
+                   : stext("Place:", 100, y + 34, 24, "start") + wl(185, 750, y + 40) + stext(x.who, 100, y + 62, 17, "start", "#6b7488");
       o += lab("When did they live there, and why did they come or leave?", 100, y + 92) + wl(100, 750, y + 114);
       o += lab("What I found out (history, events, records, maps):", 100, y + 138) + wls(100, 750, y + 160, 2, 24);
       o += lab("Where I found it (source, website, archive):", 100, y + 206) + wl(100, 750, y + 230);
