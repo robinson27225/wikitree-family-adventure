@@ -1,0 +1,112 @@
+{{Image|file=Family_Adventure_app.png|align=c|size=original|caption=Family Adventure turns a family tree into a coloring and activity workbook for children.}}
+
+'''Family Adventure''' is a free app that turns a child's family story into a printable workbook of coloring pages, tracing sheets and activities, with a fan chart of their ancestors that children can also color on screen. Enter a WikiTree ID, or type the family in by hand, choose the child's age range, and print.
+
+'''Current version:''' 0.1.0 (22 October 2026)
+
+* [https://apps.wikitree.com/apps/robinson27225/family-adventure/index.html Open Family Adventure]
+* [https://www.wikitree.com/g2g/2099357 Discussion and feedback on G2G]
+* [https://github.com/robinson27225/wikitree-family-adventure Source code on GitHub] (free and open, MIT license)
+
+{{Image|file=Family_Adventure_app-1.png|align=c|size=original|caption=The fan chart for ages 6 to 8. Each wedge is a person, and children color it on screen or on paper.}}
+
+== What it makes ==
+
+* '''A fan chart''' of the child's parents and ancestors, drawn like the ones in tree apps, with the child's name at the center.
+* '''A "Meet my family" page''' with a card for each person: a frame to draw them in, their name, how they are related, where they were born and when.
+* '''A family journey page''' that follows a dotted path through the places the family came from, from long ago to today.
+* '''Tracing and writing pages''' for the youngest children, and '''interview, timeline and research pages''' for older ones.
+* '''Drawings to color''' (house, boat, plane, suitcase, compass, globe, animals and more) that get more detailed as the children get older.
+
+Everything can be colored on screen first: choose a color, then tap a shape. Print it to color on paper, or choose "Save as PDF" in the print window.
+
+== Choose an age range ==
+
+The age range decides how many generations are shown and how detailed the pages are.
+
+{| border="1" class="wikitable"
+! Age range !! Generations !! What is different
+|-
+| '''3 to 5''' (Little Explorers) || Parents and grandparents || Big simple drawings and thick lines. Names are single dashed lines to trace with a pencil, and there is an alphabet tracing sheet.
+|-
+| '''6 to 8''' (Young Detectives) || Adds great-grandparents || Names are plain text. Small patterns in the fan chart, "about me" lines, and interview questions.
+|-
+| '''9 to 12''' (Family Historians) || Four generations || More detailed drawings and patterns, a timeline of births, and deeper interview questions.
+|-
+| '''13 and older''' (Heritage Explorers) || Five generations || Finer detail, and research pages in place of the certificate: place research, a two-page interview log, a research log, and "What I learned".
+|}
+
+{{Image|file=Family_Adventure_app-2.png|align=c|size=m|caption=Ages 3 to 5: the child's name as a dashed line to trace, on writing guide lines.}}
+
+{{Image|file=Family_Adventure_app-3.png|align=c|size=m|caption=Ages 3 to 5: an alphabet tracing sheet.}}
+
+== How to use it ==
+
+# Type the child's name and where they were born or live.
+# Choose the age range.
+# Add the family: either import it from WikiTree (below) or press '''+ Add a parent or guardian''' and type each person's name, how they are related, place and birth year. Press '''+ Add their parent''' under anyone to go back another generation.
+# Look through the pages on the right. Tap any shape to color it.
+# Press '''Print workbook'''.
+
+{{Image|file=Family_Adventure_app-8.png|align=c|size=m|caption=The side panel: the child, the WikiTree ID, the age range and the family.}}
+
+=== Any family shape ===
+
+Add as many parents and guardians as the child has, in any roles: mom, dad, step-parent, foster parent, adoptive parent, guardian, or whatever the family calls them. Type the role in your own words. There is no gender field and no limit of two parents.
+
+== Using a WikiTree ID ==
+
+# Type a WikiTree ID, such as ''Windsor-1''.
+# Choose whether it is for '''the child''' or for '''a parent or guardian'''.
+# Press '''Import from WikiTree'''.
+
+The app brings in the public ancestors it can find, with their first names, birth years and birthplaces, and a link to each profile on WikiTree. Things to know:
+
+* '''WikiTree has two biological parents for each person,''' so add step-parents, guardians and anyone else by hand afterwards.
+* '''Living people:''' WikiTree hides birthplaces and birth dates for living people. The app marks them, and you can type their details in. The older pages leave a blank "place" to fill in for them, which makes a good interview question.
+* '''+ Add their parent''' on anyone who came from WikiTree looks up their parents on WikiTree.
+* If WikiTree says it is busy, the app waits and tries again by itself.
+* '''Import works only when the app is opened from apps.wikitree.com.''' Elsewhere, type the family in by hand.
+
+== For older children ==
+
+{{Image|file=Family_Adventure_app-4.png|align=c|size=m|caption=Ages 6 to 8: a card for each person to draw and color.}}
+
+{{Image|file=Family_Adventure_app-5.png|align=c|size=m|caption=Ages 9 to 12: the family journey, from long ago to today.}}
+
+Ages 13 and older get pages meant for real research:
+
+{{Image|file=Family_Adventure_app-6.png|align=c|size=m|caption=Ages 13 and older: place research. Each place the family came from gets a box for what they found out and where they found it.}}
+
+{{Image|file=Family_Adventure_app-7.png|align=c|size=m|caption=Ages 13 and older: an interview log for talking with family members.}}
+
+* '''Place research:''' one box per place, for when the family lived there, what happened there, and where the facts were found. Relatives whose place is not listed get a blank box to ask about.
+* '''Interview log:''' who was interviewed, how, and whether they are happy to be recorded or for it to be shared, with six questions and a second page for stories, names, dates, keepsakes and follow-up questions.
+* '''Research log:''' a table of questions, where they were looked up, and what was found.
+* '''What I learned:''' a page to put it all in their own words.
+
+== Privacy and saving ==
+
+* The family you enter stays in your own browser. It is not sent anywhere, except for the request to WikiTree when you press Import.
+* '''Save file''' and '''Open file''' keep a copy of the family on your computer, for moving to another computer or sharing with a relative.
+* '''Start fresh''' clears everything. '''Try an example''' fills in a made-up family so you can see how it works.
+* Please think before you print or share a workbook that names living people.
+
+== Known limits ==
+
+* The tracing letters cover the Latin alphabet, so accents are dropped (José is traced as Jose).
+* The journey page is a path of places, not a map.
+* A person who appears twice in a tree (for example, cousins who married) is shown twice.
+
+== Feedback ==
+
+Please tell us how it works for your family on [https://www.wikitree.com/g2g/2099357 G2G], or [https://github.com/robinson27225/wikitree-family-adventure/issues open an issue] on GitHub. Ideas for more drawings, pages or languages are welcome.
+
+== Credits ==
+
+Created by [[Robinson-27225|Azure Robinson]] with the help of Claude. The app uses the public WikiTree API, and is free and open source under the MIT license.
+
+== Version history ==
+
+; 0.1.0 (22 October 2026)
+: First release. Fan chart, person cards, journey, tracing and activity pages for four age ranges, a WikiTree ID import, and research pages for ages 13 and older.
