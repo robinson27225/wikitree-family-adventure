@@ -1,3 +1,5 @@
+<img src="docs/branding/logo.png" alt="Family Adventure logo" width="128" align="right">
+
 # Family Adventure
 
 A coloring and activity workbook generator that turns a child's family story into printable pages and on-screen coloring. Built for WikiTree families, and it also works with names typed by hand.
